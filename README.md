@@ -22,4 +22,4 @@ The repository consists of mock data, data processing and analysis scripts, some
   + Plot the results of the calibration analysis. Use the output from 'CalibrationAnalysisWithKGE'.
   
 ## Notes
-* 
+* Mock input and output data is included to demonstrate how dataframes are set up and clarify what values are accessed by the scripts. Scripts should be edited to match your dataframe setup.  
