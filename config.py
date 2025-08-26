@@ -46,34 +46,4 @@ class Config:
     eta: float = 0.01
     BWEi: float = 0
 
-    @classmethod
-    def mysql_host(cls) -> str:
-        """MySQL host."""
-        value = environment_variables.get("MYSQL_HOST")
-        if value is None:
-            raise ValueError("MYSQL_HOST not set")
-        return value
 
-    @classmethod
-    def mysql_user(cls) -> str:
-        """MySQL user."""
-        value = environment_variables.get("MYSQL_USER")
-        if value is None:
-            raise ValueError("MYSQL_USER not set")
-        return value
-
-    @classmethod
-    def mysql_password(cls) -> str:
-        """MySQL password."""
-        value = environment_variables.get("MYSQL_PASSWORD")
-        if value is None:
-            raise ValueError("MYSQL_PASSWORD not set")
-        return value
-
-    @classmethod
-    def mysql_database(cls) -> str:
-        """MySQL database."""
-        value = environment_variables.get("MYSQL_DATABASE")
-        if value is None:
-            raise ValueError("MYSQL_DATABASE not set")
-        return value
