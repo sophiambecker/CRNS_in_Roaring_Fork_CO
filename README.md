@@ -26,7 +26,7 @@ The repository consists of mock data, data processing and analysis scripts, some
 
 ## Workflow
 * The scripts should be run in this order:
-  + ModCountsProcessing_Des_McJannet.py & ModCountsProcessing_Des_McJannet.py
+  + ModCountsProcessing_Des_McJannet.py & ModCountsProcessing_UTS_McJannet.py
   + BareCountsProcessing.py if desired
   + CombineDataWithFunction.py
   + FilteredSnowFreeDataForEachSite.py
