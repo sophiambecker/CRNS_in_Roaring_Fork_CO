@@ -22,4 +22,13 @@ The repository consists of mock data, data processing and analysis scripts, some
   + Plot the results of the calibration analysis. Use the output from 'CalibrationAnalysisWithKGE'.
   
 ## Notes
-* Mock input and output data is included to demonstrate how dataframes are set up and clarify what values are accessed by the scripts. Scripts should be edited to match your dataframe setup.  
+* Mock input and output data is included to demonstrate how dataframes are set up and clarify what values are accessed by the scripts. Scripts should be edited to match your dataframe setup.
+
+## Workflow
+* The scripts should be run in this order:
+  + ModCountsProcessing_Des_McJannet.py & ModCountsProcessing_UTS_McJannet.py
+  + BareCountsProcessing.py if desired
+  + CombineDataWithFunction.py
+  + FilteredSnowFreeDataForEachSite.py
+  + Calibration_AnalysisWithKGE.py
+  + Calibration_Plots.py
