@@ -17,7 +17,7 @@ from sklearn.neighbors import LocalOutlierFactor
 
 # set up directory
 stamp = datetime.now().strftime("%Y%m%d")
-inDir = 'C:\\Users\\sbecker14\\Documents\\CRNS_USGS_Analysis\\Code_for_Github'
+inDir = 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO'
 outDir = os.path.normpath(inDir + os.sep + '\\FilteredSnowFreeData_output'+stamp) + '\\'   # Set output directory
 if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
@@ -34,7 +34,7 @@ print(f'Bare detector site names are {bare_names}')
 bare_names_dict = dict(zip(bare_names, file_paths_bare))
 
 # load weighted TDR data (Includes corrected moderated counts as well)
-TDR_dir  = "CombineDataWithFunction_output20250813"
+TDR_dir  = "CombineDataWithFunction_output20251029"
 TDR_pattern = f'{TDR_dir}/*.csv'
 TDR_paths = glob.glob(TDR_pattern, recursive = True)
 TDR_dfs = [pd.read_csv(file_path) for file_path in TDR_paths]
@@ -122,7 +122,7 @@ for s in site_names:
     mod_min = np.nanmean(tdr_df_filt['Corrected_Mod_cph_for_Des'])- 2* np.nanstd(tdr_df_filt['Corrected_Mod_cph_for_Des'])
     tdr_df_filt.drop(tdr_df_filt[(tdr_df_filt['Corrected_Mod_cph_for_Des']<mod_min) | (tdr_df_filt['Corrected_Mod_cph_for_Des']>mod_max)].index, inplace = True)
     tdr_df_filt.dropna(axis = 1, how = 'all', inplace = True) # drop nan columns first
-    tdr_df_filt.dropna(subset = ['Corrected_Mod_cph_for_Des','WeightedTDR_SWC'], inplace = True)
+    tdr_df_filt.dropna(subset = ['Corrected_Mod_cph_for_Des'], inplace = True) #don't drop rows with nan in TDR data yet
     
     #ADD IN BARE COUNTS
     
