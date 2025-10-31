@@ -15,7 +15,7 @@ import numpy as np
 
 # set up directory
 stamp = datetime.now().strftime("%Y%m%d")
-inDir = 'C:\\Users\\sbecker14\\Documents\\CRNS_USGS_Analysis\\Code_for_Github'
+inDir = 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO'
 outDir = os.path.normpath(inDir + os.sep + 'CombineDataWithFunction_output'+stamp) + '\\'   # Set output directory
 if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
@@ -36,7 +36,7 @@ file_paths = glob.glob(file_pattern_nc, recursive=True)
 dataframes_loc_UTS_f3 = [pd.read_csv(file_path) for file_path in file_paths]
 
 # USGS data release
-directory_path_usgs = '\\Data\\Data_Release_2024'
+directory_path_usgs = 'Data\\Data_Release_2024'
 file_pattern_usgs = f'{directory_path_usgs}/*v1.csv'
 file_paths_usgs = glob.glob(file_pattern_usgs, recursive=True)
 dataframes_usgs = [pd.read_csv(file_path) for file_path in file_paths_usgs]
@@ -100,13 +100,17 @@ END = datetime.strptime('2024-09-30 00:00:00', date_format)
 
 def cleanlocal_df(start, end, df_loc):
     df_loc['datetime_date'] = pd.to_datetime(df_loc['datetime'], format = 'mixed')#change from 'date_format' to 'mixed'
-    df_loc_filt = df_loc[(df_loc['datetime_date'] >= start) & (df_loc['datetime_date'] <= end)]
+    df_loc_filt = df_loc[(df_loc['datetime_date'] >= start) & (df_loc['datetime_date'] <= end)].copy()
     # compute daily averages
+    # first apply filter to moderated counts, especially to filter out installation time
+    mask = (df_loc_filt['mod_nc_cph'] < 1200) | (df_loc_filt['mod_nc_cph'] > 6000) 
+    # Set entire rows to NaN where mod_nc_cph is out of range
+    df_loc_filt.loc[mask, :] = np.nan
+    
     # columns to compute mean on:
     agg_col_loc = ['mod_nc_cph', 'swc', 'Mod_cv', 'Mod_sqrt']
-    daily_avg_loc = df_loc_filt.groupby(df_loc_filt['datetime_date'].dt.date)[agg_col_loc].mean()
+    daily_avg_loc = df_loc_filt.groupby(df_loc_filt['datetime_date'].dt.date)[agg_col_loc].mean() #should ignore nan by default
     return(daily_avg_loc)
-
 
 
 def combinedfs(oldname_str, newname_str, choose_start, choose_end):
