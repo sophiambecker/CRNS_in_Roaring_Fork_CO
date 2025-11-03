@@ -338,6 +338,21 @@ Des_loocv_fit = kling_gupta_efficiency(out_df['Des_pred_singleN0'], out_df['Des_
 
 # calculate stats without outliers
 
+# find outliers using inter quartile range
+Q1 = np.percentile(out_df['Des_resid_singleN0'], 25)
+Q3 = np.percentile(out_df['Des_resid_singleN0'], 75)
+print(f"Q1: {Q1}")
+print(f"Q3: {Q3}")
+IQR = Q3 - Q1
+print(f"IQR: {IQR}")
+lower_iqr_bound = Q1 - 1.5 * IQR
+upper_iqr_bound = Q3 + 1.5 * IQR
+print(f"Lower Bound: {lower_iqr_bound}")
+print(f"Upper Bound: {upper_iqr_bound}")
+
+iqr_outliers = [x for x in out_df['Des_resid_singleN0'] if x < lower_iqr_bound or x > upper_iqr_bound]
+print(f"Outliers: {iqr_outliers}")
+
 # find outliers in the residuals # keep working on these: want to just find 1d outliers from residuals now
 
 sd_resid = np.std(out_df['Des_resid_singleN0'])
@@ -405,6 +420,9 @@ plt.ylabel('Residuals')
 plt.title('Desilets Residual Plot')
 plt.show()
 '''
+# single N0 to save using all data points
+theta_tot = out_df['Sample_total_swc_g'].astype(float).values
+N = out_df['N_Correct_Des'].values
 
 # Bootstrap parameters
 n_bootstrap = 1000  # Number of resamples
@@ -427,6 +445,17 @@ CI_lower_Des, CI_upper_Des = np.percentile(N0_bootstrap, [2.5, 97.5])
 
 print(f"95% Bootstrap Confidence Interval for N0: ({CI_lower_Des:.4f}, {CI_upper_Des:.4f})")
 
+# Define the model function: f(N, N0)
+def model(N, N0):
+    return 0.0808 / (N / N0 - 0.372) - 0.115
+
+# Fit the model using curve_fit (nonlinear least squares)
+popt, pcov = curve_fit(model, N, theta_tot, p0=[N0_start])
+
+# Extract fitted N0
+N0_fit_Des = popt[0]
+
+Des_N0 = ['Des_N0', N0_fit_Des, CI_lower_Des, CI_upper_Des]
 
 # UTS METHOD #############################################################################
 
@@ -581,6 +610,22 @@ for i in possible:
 UTS_loocv_fit = kling_gupta_efficiency(out_df['UTS_pred_singleN0'], out_df['UTS_obs_singleN0'])
 
 # identify outliers
+
+# find outliers using inter quartile range
+Q1 = np.percentile(out_df['UTS_Resid_singleN0'], 25)
+Q3 = np.percentile(out_df['UTS_Resid_singleN0'], 75)
+print(f"Q1: {Q1}")
+print(f"Q3: {Q3}")
+IQR = Q3 - Q1
+print(f"IQR: {IQR}")
+lower_iqr_bound = Q1 - 1.5 * IQR
+upper_iqr_bound = Q3 + 1.5 * IQR
+print(f"Lower Bound: {lower_iqr_bound}")
+print(f"Upper Bound: {upper_iqr_bound}")
+
+iqr_outliers = [x for x in out_df['UTS_Resid_singleN0'] if x < lower_iqr_bound or x > upper_iqr_bound]
+print(f"Outliers: {iqr_outliers}")
+
 # find outliers in the residuals # keep working on these: want to just find 1d outliers from residuals now
 
 sd_resid_uts = np.std(out_df['UTS_Resid_singleN0'])
@@ -641,8 +686,13 @@ for i in possible:
     keep_df2_uts.loc[i,'UTS_Resid_singleN0'] = residual_uts
     keep_df2_uts.loc[i,'UTS_pred_singleN0'] = theta_pred_UTS.item()
     keep_df2_uts.loc[i,'UTS_obs_singleN0'] = theta_tot_val
+
     
 UTS_loocv_fit_keep = kling_gupta_efficiency(keep_df2_uts['UTS_pred_singleN0'], keep_df2_uts['UTS_obs_singleN0'])
+
+# single N0 to save using all data points
+theta_tot = out_df['Sample_total_swc_g'].astype(float).values
+N = out_df['N_Correct_Des'].values
 
 # Bootstrap parameters
 n_bootstrap = 1000  # Number of resamples
@@ -665,8 +715,17 @@ CI_lower_UTS, CI_upper_UTS = np.percentile(N0_bootstrap_UTS, [2.5, 97.5])
 
 print(f"95% Bootstrap Confidence Interval for N0: ({CI_lower_UTS:.4f}, {CI_upper_UTS:.4f})")
 
-    
-    
+res_single_N0 = minimize_scalar(objective2, bounds=(N0_start, N0_start + 6000), method='bounded', args=(out_df, False))
+single_UTS_N0 = res_single_N0.x
+
+UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
+
+# add to df to save
+N0_ls = [Des_N0, UTS_ND]
+colnames = ['Param', 'Fit', 'Lower 95 CI', 'Upper 95 CI']
+N0_df = pd.DataFrame(N0_ls, columns=colnames)
+N0_df.to_csv(f'{outDir}\\Parameter_fit.csv')
+
 '''SAVE THE LOOCV FIT STATS'''
 
 save_dict = {'Des_full':Des_loocv_fit, 'Des_sans_outliers': Des_loocv_fit_keep,
