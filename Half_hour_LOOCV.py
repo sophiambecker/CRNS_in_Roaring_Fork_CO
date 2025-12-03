@@ -33,7 +33,7 @@ if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 # load portable calibration data
 directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20251106'
-directory_path_port_uts = 'Data\\MockPortableData\\Processed_Portable_UTS'
+directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20251106'
 port_uts_file_pattern = f'{directory_path_port_uts}\\*.csv'
 port_des_file_pattern = f'{directory_path_port_des}\\*.csv'
 port_uts_paths = glob.glob(port_uts_file_pattern, recursive = True)
@@ -831,7 +831,6 @@ CI_lower_UTS, CI_upper_UTS = np.percentile(N0_bootstrap_UTS, [2.5, 97.5])
 print(f"95% Bootstrap Confidence Interval for N0: ({CI_lower_UTS:.4f}, {CI_upper_UTS:.4f})")
 
 res_single_N0 = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(out_df, False))
-res_single_N0 = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(out_df, False))
 single_UTS_N0 = res_single_N0.x
 
 UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
@@ -840,7 +839,6 @@ UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
 pred_pore_volumetric = out_df.apply(
      lambda row: convert_neutrons_to_soil_moisture_uts(
          neutron_count=row['N_pisd_UTS'],
-         n0=single_UTS_N0,
          n0=single_UTS_N0,
          air_humidity=row['Rhov_cal_g_cm3'],
          bulk_density= row['bd'],
