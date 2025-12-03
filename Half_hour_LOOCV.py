@@ -33,7 +33,7 @@ if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 # load portable calibration data
 directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20251106'
-directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20251106'
+directory_path_port_uts = 'Data\\MockPortableData\\Processed_Portable_UTS'
 port_uts_file_pattern = f'{directory_path_port_uts}\\*.csv'
 port_des_file_pattern = f'{directory_path_port_des}\\*.csv'
 port_uts_paths = glob.glob(port_uts_file_pattern, recursive = True)
@@ -208,12 +208,14 @@ for s in site_names_new:
     
     THIS_SITE_old = new_to_old_name[THIS_SITE_new]
     
-    df = df_dict[THIS_SITE_new]
+    df = df_dict[THIS_SITE_new].copy()  # avoid mutating shared dataframes
     df['date'] = pd.to_datetime(df['DateTime']) # make sure date column is in date format
     
+    if THIS_SITE_old not in dict_port_uts:
+        print(f"{THIS_SITE_new}: missing portable UTS data for {THIS_SITE_old}. Skipping site.")
+        continue
+
     p_uts_df = dict_port_uts[THIS_SITE_old]
-    p_des_df = dict_port_des[THIS_SITE_old]
-    
     cal_dt_first = sample_dt_start[THIS_SITE_old]
     cal_dt_last = sample_dt_end[THIS_SITE_old]
     
@@ -238,9 +240,8 @@ for s in site_names_new:
         
     # get stationary raw counts right away (calibration period might change slightly below based on in airRH and airT availability)
     cal_data_1 = df[(df['date'] >= cal_dt_first) & (df['date'] <= cal_dt_last)]
-    N_raw_s = cal_data_1['Raw_Moderated_cph'].mean() # raw stationary counts during calibration
-     
-    check_cols = ['Corrected_Mod_cph_for_Des','Corrected_Mod_cph_for_UTS','airRH','airT'] # for now it's okay if TDR is NaN, we are just calibrating with samples
+    
+    check_cols = ['Corrected_Mod_cph_for_Des','Corrected_Mod_cph_for_UTS','airRH','airT','Raw_Moderated_cph'] # for now it's okay if TDR is NaN, we are just calibrating with samples
    
     # check the above columns for nan values. If any column contains an nan value, use the nearest date without nan values as the calibration date. 
     # Check if any NaNs in the row for the starting calibration datetime
@@ -286,7 +287,13 @@ for s in site_names_new:
     
     # need to filter unrealistic raw counts: 
     cal_data = cal_data.dropna(subset=check_cols)
+
+    if cal_data.empty:
+        print(f"{THIS_SITE_new}: no calibration data after dropping NaNs in {check_cols}. Skipping site.")
+        continue
     
+    N_raw_s = cal_data['Raw_Moderated_cph'].mean() # raw stationary counts during calibration
+
     cal_swc = cal_data['WeightedTDR_SWC'].mean()
     
     Ncal_Des_st = cal_data['Corrected_Mod_cph_for_Des'].mean() # stationary data during soil sampling
@@ -296,6 +303,10 @@ for s in site_names_new:
     
     N_raw_p = reference_dict[THIS_SITE_new] # raw portable counts during calibration
     
+    if not np.isfinite(N_raw_s) or N_raw_s == 0:
+        print(f"{THIS_SITE_new}: invalid stationary raw counts (N_raw_s={N_raw_s}). Skipping site.")
+        continue
+
     N_ratio_raw = N_raw_p/N_raw_s
     Ncal_Des_st_d = Ncal_Des_st * N_ratio_raw # scale stationary counts by sensitivity compared to portable
     Ncal_UTS_st_d = Ncal_UTS_st * N_ratio_raw
@@ -335,6 +346,9 @@ for s in site_names_new:
     T_cal = cal_data['airT'].mean()
     
     Rhov_cal_g = cal_data['Rhov_g_cm3'].mean() # in g/cm^3
+    if pd.isna(Rhov_cal_g):
+        print(f"{THIS_SITE_new}: Rhov_g_cm3 is NaN during calibration window. Skipping site.")
+        continue
     
     objective_singlerow = None
     
@@ -367,8 +381,9 @@ for s in site_names_new:
     
     # might need to come back and add BWE estimates
     
-    BWE = TotBWE_df[TotBWE_df['Site']==THIS_SITE_old]['BWE Representing 200 m Radius Footprint (mm)'].item()
-    BWE_uncer = TotBWE_df[TotBWE_df['Site']==THIS_SITE_old]['BWE Uncertainty (mm)'].item()
+    bwe_rows = TotBWE_df[TotBWE_df['Site']==THIS_SITE_old]
+    BWE = bwe_rows['BWE Representing 200 m Radius Footprint (mm)'].iloc[0] if not bwe_rows.empty else np.nan
+    BWE_uncer = bwe_rows['BWE Uncertainty (mm)'].iloc[0] if not bwe_rows.empty else np.nan
     
     row = {'N_pvisd_Des': Ncal_Des_st_d, 'N_pisd_UTS': Ncal_UTS_st_d, 'Sample_total_swc_g': GRAV_swc_tot_g, 'TDR_total_swc_g': TDR_swc_tot_g, 'bd': site_bd, 
            'lw': lw, 'soc_water': soc, 'Porosity': porosity, 'Elev': elev, 'Canopy': Canopy, 'landCoverClass': LC, 'OldName': THIS_SITE_old, 'NewName': THIS_SITE_new, 
