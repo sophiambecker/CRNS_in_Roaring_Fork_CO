@@ -7,7 +7,8 @@ Created on Mon Dec  1 15:33:20 2025
 
 # libraries
 import os
-os.chdir('C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
 from config import Config
 from watervapor import calculate_watervapor
 from UTS_helpers import convert_neutrons_to_soil_moisture_uts
@@ -455,7 +456,7 @@ upper_iqr_bound = Q3 + 1.5 * IQR
 print(f"Lower Bound: {lower_iqr_bound}")
 print(f"Upper Bound: {upper_iqr_bound}")
 
-iqr_outliers = [x for x in out_df['Des_resid_loocv_N0'] if x < lower_iqr_bound or x > upper_iqr_bound]
+iqr_outliers = [x for x in out_df_use['Des_resid_loocv_N0'] if x < lower_iqr_bound or x > upper_iqr_bound]
 iqr_outliers_rowsD = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper_iqr_bound) | (out_df_use['Des_resid_loocv_N0']<lower_iqr_bound))]
 print(f"Outliers from IQR: {iqr_outliers}")
 
@@ -466,7 +467,7 @@ mean_resid = np.mean(out_df_use['Des_resid_loocv_N0'])
 upper = mean_resid + 2*sd_resid
 lower = mean_resid - 2*sd_resid
 
-outliers = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper) | (out_df['Des_resid_loocv_N0']<lower))]
+outliers = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper) | (out_df_use['Des_resid_loocv_N0']<lower))]
 print(f"Outliers from standard deviation: {outliers}")
 
 keep_df = out_df_use.drop(outliers.index).copy()
@@ -542,6 +543,7 @@ plt.show()
 # single N0 to save using all data points
 theta_tot = out_df['Sample_total_swc_g'].astype(float).values
 N = out_df['N_pvisd_Des'].values
+N0_start_all_des = N.mean()
 
 # Bootstrap parameters
 n_bootstrap = 1000  # Number of resamples
@@ -572,7 +574,7 @@ popt = None
 N0_fit_Des = None
 
 # Fit the model using curve_fit (nonlinear least squares)
-popt, pcov = curve_fit(model, N, theta_tot, p0=[N0_start])
+popt, pcov = curve_fit(model, N, theta_tot, p0=[N0_start_all_des])
 
 # Extract fitted N0
 N0_fit_Des = popt[0]
@@ -676,7 +678,7 @@ for i in possible:
 
     # Run the minimizer
     res = None
-    res = minimize_scalar(objective2, args=(subset), bounds=(N0_start, N0_start + 6000), method='bounded')
+    res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded')
 
     # Best-fit N0 value
     N0_UTS = None
@@ -759,7 +761,7 @@ for i in possible:
 
     # Run the minimizer
     res = None
-    res = minimize_scalar(objective2, args=(subset), bounds=(N0_start, N0_start + 6000), method='bounded')
+    res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded')
 
     # Best-fit N0 value
     N0_UTS = None
@@ -796,6 +798,7 @@ UTS_loocv_fit_keep = kling_gupta_efficiency(keep_df2_uts['UTS_pred_loocv_N0'], k
 # single N0 to save using all data points
 theta_tot = out_df['Sample_total_swc_g'].astype(float).values
 N = out_df['N_pisd_UTS'].values
+N0_start_all_uts = N.mean()
 
 # Bootstrap parameters
 n_bootstrap = 1000  # Number of resamples
@@ -805,7 +808,7 @@ N0_bootstrap_UTS = []
 for i in range(n_bootstrap):
     sample_df = out_df.sample(n=len(out_df), replace=True)
     try:
-        res_bs = minimize_scalar(objective2, bounds=(N0_start, N0_start + 6000), method='bounded', args=(sample_df, False))
+        res_bs = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(sample_df, False))
         if res_bs.success and np.isfinite(res_bs.fun):
             N0_bootstrap_UTS.append(res_bs.x)
         else:
@@ -818,7 +821,7 @@ CI_lower_UTS, CI_upper_UTS = np.percentile(N0_bootstrap_UTS, [2.5, 97.5])
 
 print(f"95% Bootstrap Confidence Interval for N0: ({CI_lower_UTS:.4f}, {CI_upper_UTS:.4f})")
 
-res_single_N0 = minimize_scalar(objective2, bounds=(N0_start, N0_start + 6000), method='bounded', args=(out_df, False))
+res_single_N0 = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(out_df, False))
 single_UTS_N0 = res_single_N0.x
 
 UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
@@ -827,7 +830,7 @@ UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
 pred_pore_volumetric = out_df.apply(
      lambda row: convert_neutrons_to_soil_moisture_uts(
          neutron_count=row['N_pisd_UTS'],
-         n0=N0_UTS,
+         n0=single_UTS_N0,
          air_humidity=row['Rhov_cal_g_cm3'],
          bulk_density= row['bd'],
          lattice_water=row['lw'] * row['bd'],
