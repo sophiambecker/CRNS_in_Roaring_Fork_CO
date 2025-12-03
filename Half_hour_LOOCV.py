@@ -193,14 +193,11 @@ for s in site_names_new:
     Ncal_Des_st = None 
     Ncal_UTS_st = None
     N_ratio_raw = None
-    
     site_bd = None
-    
     swc_g = None
     lw = None
     soc = None
     GRAV_swc_tot_g = None
-    
     Rhov_cal_g = None
     
     THIS_SITE_new = s
@@ -210,8 +207,8 @@ for s in site_names_new:
     df = df_dict[THIS_SITE_new]
     df['date'] = pd.to_datetime(df['DateTime']) # make sure date column is in date format
     
-    p_uts_df = dict_port_uts[THIS_SITE_old]
-    p_des_df = dict_port_des[THIS_SITE_old]
+    p_uts_df = dict_port_uts[THIS_SITE_old] # portable data
+    p_des_df = dict_port_des[THIS_SITE_old] # portable data
     
     cal_dt_first = sample_dt_start[THIS_SITE_old]
     cal_dt_last = sample_dt_end[THIS_SITE_old]
@@ -219,7 +216,6 @@ for s in site_names_new:
     if not (df['date'] == cal_dt_first).any():
         print(f"{THIS_SITE_new} Calibration date {cal_dt_first} not found. Finding nearest date...")
         
-        #df['date_diff'] = df['date'].apply(lambda d: abs(d - cal_date))
         df['date_diff'] = (df['date'] - cal_dt_first).abs()
     
         nearest_row = df.loc[df['date_diff'].idxmin()]
@@ -267,19 +263,12 @@ for s in site_names_new:
         cal_dt_first = nearest_dt
         
         print(f"Nearest Starting DateTime with values for corrected counts, RH, and Temp is {cal_dt_first} for {THIS_SITE_new}.")
+        cal_dt_last = cal_dt_first + pd.Timedelta(hours=2)
+        print(f"Setting last sample time to 2 hours after cal_dt_first: {cal_dt_last}")
         QA2 = 'FALSE'  # Different datetime was used
     
     else: QA2 = 'TRUE'  # Original datetime is valid
-    
-    # check end of calibration period :
-    if df.loc[df['date'] == cal_dt_last, check_cols].isnull().any(axis=1).any():
-        
-        cal_dt_last = cal_dt_first + pd.Timedelta(hours=2)
-        print(f"Setting last sample time to 2 hours after cal_dt_first: {cal_dt_last}")
-         # False if there were NaNs in the stationary data for the sampling time and a different datetime is used instead
-         
-    # make sure end of calibration period is after beginning of calibration period
-         
+     
     # Now extract cal_data
     cal_data = df[(df['date'] >= cal_dt_first) & (df['date'] <= cal_dt_last)]
     
@@ -455,7 +444,7 @@ upper_iqr_bound = Q3 + 1.5 * IQR
 print(f"Lower Bound: {lower_iqr_bound}")
 print(f"Upper Bound: {upper_iqr_bound}")
 
-iqr_outliers = [x for x in out_df['Des_resid_loocv_N0'] if x < lower_iqr_bound or x > upper_iqr_bound]
+iqr_outliers = [x for x in out_df_use['Des_resid_loocv_N0'] if x < lower_iqr_bound or x > upper_iqr_bound]
 iqr_outliers_rowsD = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper_iqr_bound) | (out_df_use['Des_resid_loocv_N0']<lower_iqr_bound))]
 print(f"Outliers from IQR: {iqr_outliers}")
 
@@ -466,7 +455,7 @@ mean_resid = np.mean(out_df_use['Des_resid_loocv_N0'])
 upper = mean_resid + 2*sd_resid
 lower = mean_resid - 2*sd_resid
 
-outliers = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper) | (out_df['Des_resid_loocv_N0']<lower))]
+outliers = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper) | (out_df_use['Des_resid_loocv_N0']<lower))]
 print(f"Outliers from standard deviation: {outliers}")
 
 keep_df = out_df_use.drop(outliers.index).copy()
@@ -542,7 +531,7 @@ plt.show()
 # single N0 to save using all data points
 theta_tot = out_df['Sample_total_swc_g'].astype(float).values
 N = out_df['N_pvisd_Des'].values
-
+N0_start_all = N.mean()
 # Bootstrap parameters
 n_bootstrap = 1000  # Number of resamples
 N0_bootstrap = []
@@ -572,7 +561,7 @@ popt = None
 N0_fit_Des = None
 
 # Fit the model using curve_fit (nonlinear least squares)
-popt, pcov = curve_fit(model, N, theta_tot, p0=[N0_start])
+popt, pcov = curve_fit(model, N, theta_tot, p0=[N0_start_all])
 
 # Extract fitted N0
 N0_fit_Des = popt[0]
@@ -676,7 +665,7 @@ for i in possible:
 
     # Run the minimizer
     res = None
-    res = minimize_scalar(objective2, args=(subset), bounds=(N0_start, N0_start + 6000), method='bounded')
+    res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded') # recall that args expects a tuple
 
     # Best-fit N0 value
     N0_UTS = None
@@ -759,7 +748,7 @@ for i in possible:
 
     # Run the minimizer
     res = None
-    res = minimize_scalar(objective2, args=(subset), bounds=(N0_start, N0_start + 6000), method='bounded')
+    res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded')
 
     # Best-fit N0 value
     N0_UTS = None
@@ -796,6 +785,7 @@ UTS_loocv_fit_keep = kling_gupta_efficiency(keep_df2_uts['UTS_pred_loocv_N0'], k
 # single N0 to save using all data points
 theta_tot = out_df['Sample_total_swc_g'].astype(float).values
 N = out_df['N_pisd_UTS'].values
+N0_start_all_uts = N.mean()
 
 # Bootstrap parameters
 n_bootstrap = 1000  # Number of resamples
@@ -805,7 +795,7 @@ N0_bootstrap_UTS = []
 for i in range(n_bootstrap):
     sample_df = out_df.sample(n=len(out_df), replace=True)
     try:
-        res_bs = minimize_scalar(objective2, bounds=(N0_start, N0_start + 6000), method='bounded', args=(sample_df, False))
+        res_bs = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(sample_df, False))
         if res_bs.success and np.isfinite(res_bs.fun):
             N0_bootstrap_UTS.append(res_bs.x)
         else:
@@ -818,7 +808,7 @@ CI_lower_UTS, CI_upper_UTS = np.percentile(N0_bootstrap_UTS, [2.5, 97.5])
 
 print(f"95% Bootstrap Confidence Interval for N0: ({CI_lower_UTS:.4f}, {CI_upper_UTS:.4f})")
 
-res_single_N0 = minimize_scalar(objective2, bounds=(N0_start, N0_start + 6000), method='bounded', args=(out_df, False))
+res_single_N0 = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(out_df, False))
 single_UTS_N0 = res_single_N0.x
 
 UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
@@ -827,7 +817,7 @@ UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
 pred_pore_volumetric = out_df.apply(
      lambda row: convert_neutrons_to_soil_moisture_uts(
          neutron_count=row['N_pisd_UTS'],
-         n0=N0_UTS,
+         n0=single_UTS_N0,
          air_humidity=row['Rhov_cal_g_cm3'],
          bulk_density= row['bd'],
          lattice_water=row['lw'] * row['bd'],
