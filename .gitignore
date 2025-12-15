@@ -60,3 +60,15 @@ env/
 *.egg-info/
 .eggs/
 .DS_Store
+# Scripts to ignore
+/Half_hour_LOOCV.py
+/Half_hour_LOOCV_tweaks.py
+/Calibration_AnalysisWithKGE.py
+/Calibration_Plots.py
+/ModCountsProcessing_Des_McJannet.py
+/ModCountsProcessing_UTS_McJannet.py
+# Outputs used only by the above scripts
+/FilteredSnowFreeData_output20250813/
+/Calibration_AnalysisWithKGE_output_20251025/
+/Data/MockPortableData/Processed_Portable_Des/
+/Data/MockPortableData/Processed_Portable_UTS/

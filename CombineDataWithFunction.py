@@ -24,13 +24,13 @@ os.chdir(inDir)
 # load data
 
 # locally processed CRNS swc (Desilets and f_inc_3)
-directory_path_nc = 'ModCountsProcessing_Des_output20250812'
+directory_path_nc = 'Data\\ModCountsProcessing_Des_output20251120'
 file_pattern_nc = f'{directory_path_nc}/Mod*'
 file_paths = glob.glob(file_pattern_nc, recursive=True)
 dataframes_loc_Des_f3 = [pd.read_csv(file_path) for file_path in file_paths]
 
 # locally processed CRNS swc (UTS and f_inc_3)
-directory_path_nc = 'ModCountsProcessing_UTS_output20250813'
+directory_path_nc = 'Data\\ModCountsProcessing_UTS_output20251120'
 file_pattern_nc = f'{directory_path_nc}/Mod*'
 file_paths = glob.glob(file_pattern_nc, recursive=True)
 dataframes_loc_UTS_f3 = [pd.read_csv(file_path) for file_path in file_paths]
@@ -58,7 +58,7 @@ dataframe_dict_loc_UTS_f3 = dict(zip(sitenames_loc_list, dataframes_loc_UTS_f3))
 sitenames_df = pd.read_excel('Data\\Data_Release_2024\\Network_paper_site_names.xlsx')
 
 # read site-specific variables
-site_var = pd.read_excel("Data\\Mock Calibration Summary.xlsx")
+site_var = pd.read_excel("Data\\Mock Calibration Summary2.xlsx")
 
 # time period: 
 # find the earliest date with CRNS at all RF sites
@@ -107,8 +107,14 @@ def cleanlocal_df(start, end, df_loc):
     # Set entire rows to NaN where mod_nc_cph is out of range
     df_loc_filt.loc[mask, :] = np.nan
     
+    # apply another site-specific filter for outlier counts
+    #mask2 = (df_loc_filt['mod_nc_cph'] < 1200) | (df_loc_filt['mod_nc_cph'] > 6000) 
+    
     # columns to compute mean on:
-    agg_col_loc = ['mod_nc_cph', 'swc', 'Mod_cv', 'Mod_sqrt']
+    if 'Rhov_g_cm3' in df_loc_filt.columns:
+        agg_col_loc = ['mod_nc_cph', 'swc', 'Mod_cv', 'Mod_sqrt', 'Rhov_g_cm3']
+    else: agg_col_loc = ['mod_nc_cph', 'swc', 'Mod_cv', 'Mod_sqrt']
+    
     daily_avg_loc = df_loc_filt.groupby(df_loc_filt['datetime_date'].dt.date)[agg_col_loc].mean() #should ignore nan by default
     return(daily_avg_loc)
 
@@ -156,8 +162,8 @@ def combinedfs(oldname_str, newname_str, choose_start, choose_end):
     #rename columns
     daily_comb.columns = [
         'Mod_cph_Des_f3', 'CRNS_SWC_Des_f3', 'Mod_cv', 'Mod_sqrt',
-        'Mod_cph_UTS_f3', 'CRNS_SWC_UTS_f3','Mod_cv', 'Mod_sqrt'
-    ] + list(daily_comb.columns[8:])
+        'Mod_cph_UTS_f3', 'CRNS_SWC_UTS_f3','Mod_cv', 'Mod_sqrt', 'Rhov_g_cm3'
+    ] + list(daily_comb.columns[9:])
 
     # Select only the first occurrence of each column name
     daily_comb = daily_comb.loc[:, ~daily_comb.columns.duplicated()]
@@ -314,8 +320,8 @@ def combinedfs(oldname_str, newname_str, choose_start, choose_end):
 
     # simplified dataframe
 
-    keep = ['N1_cts', 'Mod_cv', 'Mod_sqrt', 'Mod_cph_Des_f3', 'CRNS_SWC_Des_f3', 'Mod_cph_UTS_f3','CRNS_SWC_UTS_f3',
-            'SWC_5', 'SWC_10', 'SWC_20', 'SWC_50','WeightedTDR_SWC', 
+    keep = ['N1_cts', 'Mod_cv', 'Mod_sqrt', 'Mod_cph_Des_f3', 'CRNS_SWC_Des_f3', 'Mod_cph_UTS_f3','CRNS_SWC_UTS_f3','Rhov_g_cm3',
+            'BaroPress', 'SWC_5', 'SWC_10', 'SWC_20', 'SWC_50','WeightedTDR_SWC', 
             'WeightedTDR_SD', 'WeightedTDR_SE', 'sT_5', 'sT_10', 'sT_20', 'sT_50', 'ppt', 'BaroPress', 'airRH', 'airT',]
 
     daily_simple = daily_comb_TDR[keep]
@@ -323,7 +329,7 @@ def combinedfs(oldname_str, newname_str, choose_start, choose_end):
     #rename colums
     
     new_col_names = ['Raw_Moderated_cph', 'Raw_Mod_Coeff_of_Var', 'Raw_Mod_sqrt', 'Corrected_Mod_cph_for_Des', 'SWC_Des_cm3_cm3', 
-                     'Corrected_Mod_cph_for_UTS', 'SWC_UTS_cm3_cm3', 'SWC_5', 'SWC_10', 'SWC_20', 'SWC_50','WeightedTDR_SWC', 
+                     'Corrected_Mod_cph_for_UTS', 'SWC_UTS_cm3_cm3', 'Rhov_g_cm3','BaroPress_mb', 'SWC_5', 'SWC_10', 'SWC_20', 'SWC_50','WeightedTDR_SWC', 
                      'WeightedTDR_SD', 'WeightedTDR_SE', 'sT_5', 'sT_10', 'sT_20', 'sT_50', 'PRISM_ppt_mm', 'BaroPress', 'airRH', 'airT']
 
     daily_simple.columns = new_col_names

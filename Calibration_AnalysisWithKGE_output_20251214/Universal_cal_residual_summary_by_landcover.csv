@@ -1,0 +1,7 @@
+Land Cover,Method,Mean Residual (g/g),RMSE (g/g)
+forest,Des,0.0051,0.076
+forest,UTS,-0.011,0.077
+half-forest,Des,0.012,0.039
+half-forest,UTS,0.0096,0.029
+non-forest,Des,0.015,0.035
+non-forest,UTS,0.002,0.038

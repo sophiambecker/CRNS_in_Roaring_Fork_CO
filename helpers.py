@@ -118,7 +118,7 @@ def clean_data_local(df: pd.DataFrame, site_variables: pd.DataFrame) -> pd.DataF
     df['caldate']=site_variables['CalDate']
 	
     # TODO: these vary by site
-    df.loc[np.logical_or(df.t7_c > 80, df.t7_c < -50), "t7_c"] = np.nan
+    df.loc[np.logical_or(df.t7_c > 50, df.t7_c < -50), "t7_c"] = np.nan
     df.loc[np.logical_or(df.h7_pct > 120, df.h7_pct < 0), "h7_pct"] = np.nan # change upper bound from 109 to 120
     df.loc[np.logical_or(df.n1_persamp > 25000, df.n1_persamp < 100), "n1_persamp"] = (
         np.nan

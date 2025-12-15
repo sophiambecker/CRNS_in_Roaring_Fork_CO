@@ -1,0 +1,14 @@
+t-Test: Paired Two Sample for Means,,
+,,
+,Des_resid_N0_fit_to_all,UTS_resid_N0_fit_to_all
+Mean,0.00994051,0.005434384
+Variance,0.002897365,0.00271726
+Observations,15,15
+Pearson Correlation,0.937436756,
+Hypothesized Mean Difference,0,
+df,14,
+t Stat,0.927600437,
+P(T<=t) one-tail,0.184665734,
+t Critical one-tail,1.761310136,
+P(T<=t) two-tail,0.369331467,
+t Critical two-tail,2.144786688,

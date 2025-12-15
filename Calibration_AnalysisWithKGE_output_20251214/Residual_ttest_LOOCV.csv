@@ -1,0 +1,2 @@
+Test,t statistic,p-value,n paired
+Paired t-test for diff in mean Des vs UTS squared residuals,0.95,0.36,15

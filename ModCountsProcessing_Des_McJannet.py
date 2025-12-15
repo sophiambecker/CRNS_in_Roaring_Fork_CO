@@ -35,7 +35,7 @@ outFold = '\\ModCountsProcessing_Des_output{}'.format(stamp)
 outDir = os.path.normpath(Dir + os.sep + outFold) + '\\'    # Set output directory
 if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
-site_var = pd.read_excel("Data\\Mock Calibration Summary.xlsx")
+site_var = pd.read_excel("Data\\Mock Calibration Summary2.xlsx")
 
 def process_local(df: pd.DataFrame) -> None:
     """Calculate neutron counts, bwe and swc."""

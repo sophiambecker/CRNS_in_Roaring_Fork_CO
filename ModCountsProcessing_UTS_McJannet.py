@@ -34,7 +34,7 @@ outDir = os.path.normpath(Dir + os.sep + outFold) + '\\'    # Set output directo
 if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 # load dataframe with site specific variables (calibration water content, lattice water, etc. )
-site_var = pd.read_excel("Data\\Mock Calibration Summary.xlsx")
+site_var = pd.read_excel("Data\\Mock Calibration Summary2.xlsx")
 
 # define processing function for a single data frame and then use it to loop through all data frames
 def process_local(df: pd.DataFrame) -> None:
@@ -288,7 +288,8 @@ def process_local(df: pd.DataFrame) -> None:
     bwe=gb.BWE.mean(),
     Mod_cv = gb.Mod_cv.mean(),
     Mod_sqrt = gb.Mod_sqrt.mean(),
-    N0_fit = N0_cal
+    N0_fit = N0_cal, 
+    Rhov_g_cm3 = gb.rhov_g_cm3.mean()
     )
     )
     df2["site"] = str(site_id)

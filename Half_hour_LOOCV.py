@@ -7,9 +7,9 @@ Created on Mon Dec  1 15:33:20 2025
 
 # libraries
 import os
-os.chdir('C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO')
-from config import Config
-from watervapor import calculate_watervapor
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
+#from config import Config
 from UTS_helpers import convert_neutrons_to_soil_moisture_uts
 
 import datetime as dt
@@ -18,9 +18,8 @@ import pandas as pd
 import glob
 import numpy as np
 from scipy.optimize import curve_fit
-import matplotlib.pyplot as plt
 from scipy.optimize import minimize_scalar
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, ttest_rel
 
 stamp = dt.datetime.now().strftime("%Y%m%d") 
 Dir = os.getcwd()
@@ -45,7 +44,7 @@ dict_port_des = dict(zip(site_names_old_port_des, dfs_port_des_ls))
 dict_port_uts = dict(zip(site_names_old_port_uts, dfs_port_uts_ls))
 
 # Use data that's been filtered for outliers and snow:
-directory_path = 'CombineDataWithFunction_half_hr_output20251202'
+directory_path = 'CombineDataWithFunction_half_hr_output20251212'
 file_pattern = f'{directory_path}\\*.csv'
 file_paths = glob.glob(file_pattern, recursive=True)
 dfs_ls = [pd.read_csv(file_path) for file_path in file_paths]
@@ -168,6 +167,27 @@ def kling_gupta_efficiency(predicted, observed):
         'std_bias':np.abs(std_pred-std_obs)
     }])
 
+# Compute unbiased RMSE in volumetric units (cm^3/cm^3) using site-specific bulk density.
+def compute_ubrmse_volumetric(predicted_g, observed_g, bulk_density):
+    pred = np.array(predicted_g, dtype=float)
+    obs = np.array(observed_g, dtype=float)
+    bd = np.array(bulk_density, dtype=float)
+    mask = ~np.isnan(pred) & ~np.isnan(obs) & ~np.isnan(bd)
+    if not np.any(mask):
+        return np.nan
+    pred_vol = pred[mask] * bd[mask]
+    obs_vol = obs[mask] * bd[mask]
+    return np.sqrt(np.mean(((pred_vol - np.mean(pred_vol)) - (obs_vol - np.mean(obs_vol)))**2))
+
+# Round numeric values to a fixed number of significant figures.
+def round_sigfig(value, sig=2):
+    if pd.isna(value):
+        return value
+    try:
+        return float(f"{value:.{sig}g}")
+    except (ValueError, TypeError):
+        return value
+
 '''
 KGE Interpretation:
 γ Value	Interpretation
@@ -204,12 +224,15 @@ for s in site_names_new:
     
     THIS_SITE_old = new_to_old_name[THIS_SITE_new]
     
-    df = df_dict[THIS_SITE_new]
+    df = df_dict[THIS_SITE_new].copy()  # avoid mutating shared dataframes
     df['date'] = pd.to_datetime(df['DateTime']) # make sure date column is in date format
+    df.drop(df[(df['Raw_Moderated_cph']<7000) | (df['Raw_Moderated_cph']>30000)].index, inplace = True) 
     
-    p_uts_df = dict_port_uts[THIS_SITE_old] # portable data
-    p_des_df = dict_port_des[THIS_SITE_old] # portable data
-    
+    if THIS_SITE_old not in dict_port_uts:
+        print(f"{THIS_SITE_new}: missing portable UTS data for {THIS_SITE_old}. Skipping site.")
+        continue
+
+    p_uts_df = dict_port_uts[THIS_SITE_old]
     cal_dt_first = sample_dt_start[THIS_SITE_old]
     cal_dt_last = sample_dt_end[THIS_SITE_old]
     
@@ -233,9 +256,9 @@ for s in site_names_new:
         
     # get stationary raw counts right away (calibration period might change slightly below based on in airRH and airT availability)
     cal_data_1 = df[(df['date'] >= cal_dt_first) & (df['date'] <= cal_dt_last)]
-    N_raw_s = cal_data_1['Raw_Moderated_cph'].mean() # raw stationary counts during calibration
-     
-    check_cols = ['Corrected_Mod_cph_for_Des','Corrected_Mod_cph_for_UTS','airRH','airT'] # for now it's okay if TDR is NaN, we are just calibrating with samples
+    
+        
+    check_cols = ['Corrected_Mod_cph_for_Des','Corrected_Mod_cph_for_UTS','airRH','airT','Raw_Moderated_cph'] # for now it's okay if TDR is NaN, we are just calibrating with samples
    
     # check the above columns for nan values. If any column contains an nan value, use the nearest date without nan values as the calibration date. 
     # Check if any NaNs in the row for the starting calibration datetime
@@ -274,46 +297,53 @@ for s in site_names_new:
     
     # need to filter unrealistic raw counts: 
     cal_data = cal_data.dropna(subset=check_cols)
+
+    if cal_data.empty:
+        print(f"{THIS_SITE_new}: no calibration data after dropping NaNs in {check_cols}. Skipping site.")
+        continue
     
-    cal_swc = cal_data['WeightedTDR_SWC'].mean()
+    N_raw_s = cal_data['Raw_Moderated_cph'].mean() # raw stationary counts during calibration
+
+    cal_swc = cal_data['WeightedTDR_SWC'].mean() # CS655 during calibration
     
     Ncal_Des_st = cal_data['Corrected_Mod_cph_for_Des'].mean() # stationary data during soil sampling
     Ncal_UTS_st = cal_data['Corrected_Mod_cph_for_UTS'].mean() # stationary data during soil sampling
     
     #Get raw counts: 
     
-    N_raw_p = reference_dict[THIS_SITE_new] # raw portable counts during calibration
+    N_raw_p = float(reference_dict[THIS_SITE_new]) # raw portable counts during calibration
     
-    N_ratio_raw = N_raw_p/N_raw_s
+    if not np.isfinite(N_raw_s) or N_raw_s == 0:
+        print(f"{THIS_SITE_new}: invalid stationary raw counts (N_raw_s={N_raw_s}). Skipping site.")
+        continue
+
+    N_ratio_raw = N_raw_p/N_raw_s # Ratio of portable to startionary raw counts
     Ncal_Des_st_d = Ncal_Des_st * N_ratio_raw # scale stationary counts by sensitivity compared to portable
     Ncal_UTS_st_d = Ncal_UTS_st * N_ratio_raw
     
     # Get other site-specific variables to calculate total gravimetric water content
-    
     site_bd = site_var[THIS_SITE_old][24]
-    
     swc_g = site_var[THIS_SITE_old][18] # pore water (g/g)
     lw = site_var[THIS_SITE_old][26] # lattice water (g/g)
     soc = site_var[THIS_SITE_old][29] # soc water (g/g)
     
+    swc_g_sd = site_var[THIS_SITE_old][19]
     porosity = 1-(site_bd/2.65)
     
     print(f"{THIS_SITE_new}: bd={site_bd}, lw={lw}, soc={soc}")
     
-    GRAV_swc_tot_g = swc_g + lw + soc
+    GRAV_swc_tot_g = swc_g + lw + soc # Total water content in g/g
     
     # pore gravimetric water content from TDR = (volumetric water content)/bd
     TDR_Pore_g = cal_swc/site_bd
     
-    TDR_swc_tot_g = TDR_Pore_g + lw + soc
+    TDR_swc_tot_g = TDR_Pore_g + lw + soc # total water content according to CS655 (g/g)
     
     elev = site_var[THIS_SITE_old][6]
     
     # add forest/non-forest column:
     Canopy = f_clas_dict[THIS_SITE_old]
     LC = veg_dict[THIS_SITE_old]
-    
-    #N0_ratio = site_var[THIS_SITE_old][42] # portable/stationary # this isn't used for anything
     
     # Extract fitted N0
     N0_Des = None
@@ -323,9 +353,14 @@ for s in site_names_new:
     T_cal = cal_data['airT'].mean()
     
     Rhov_cal_g = cal_data['Rhov_g_cm3'].mean() # in g/cm^3
+    if pd.isna(Rhov_cal_g):
+        print(f"{THIS_SITE_new}: Rhov_g_cm3 is NaN during calibration window. Skipping site.")
+        continue
     
+    # make function None so that you can redefine it below
     objective_singlerow = None
     
+    # the convert_neutrons_to_soil_moisture_uts function outputs pore volumetric water content
     def objective_singlerow(N0):
         
             try:
@@ -341,45 +376,71 @@ for s in site_names_new:
             except:
                 return np.inf  # Return a large error if conversion fails
             
-            actual_swc = swc_g * site_bd # pore gravimetric water content
+            actual_swc = swc_g * site_bd # pore volumetric water content = pore gravimetric water content * bulk density
             
             return abs(swc_pred - actual_swc)  # absolute error
     
     # Run the minimizer
     res = None
-    res = minimize_scalar(objective_singlerow, bounds=(Ncal_Des_st_d, Ncal_Des_st_d + 6000), method='bounded')
+    res = minimize_scalar(objective_singlerow, bounds=(Ncal_UTS_st_d, Ncal_UTS_st_d + 6000), method='bounded')
     
-    # Best-fit N0 value
-    N0_UTS = None
-    N0_UTS = res.x
+    # Best-fit ND value
+    ND_UTS = None
+    ND_UTS = res.x
     
     # might need to come back and add BWE estimates
     
-    BWE = TotBWE_df[TotBWE_df['Site']==THIS_SITE_old]['BWE Representing 200 m Radius Footprint (mm)'].item()
-    BWE_uncer = TotBWE_df[TotBWE_df['Site']==THIS_SITE_old]['BWE Uncertainty (mm)'].item()
+    bwe_rows = TotBWE_df[TotBWE_df['Site']==THIS_SITE_old]
+    BWE = bwe_rows['BWE Representing 200 m Radius Footprint (mm)'].iloc[0] if not bwe_rows.empty else np.nan
+    BWE_uncer = bwe_rows['BWE Uncertainty (mm)'].iloc[0] if not bwe_rows.empty else np.nan
     
-    row = {'N_pvisd_Des': Ncal_Des_st_d, 'N_pisd_UTS': Ncal_UTS_st_d, 'Sample_total_swc_g': GRAV_swc_tot_g, 'TDR_total_swc_g': TDR_swc_tot_g, 'bd': site_bd, 
+    # add check for N0 and ND solutions:
+    pred_Des = 0.0808 / (Ncal_Des_st_d / N0_Des - 0.372) - 0.115
+    pred_UTS = convert_neutrons_to_soil_moisture_uts(
+        neutron_count=Ncal_UTS_st_d,
+        n0=ND_UTS,
+        air_humidity=Rhov_cal_g,
+        bulk_density=site_bd,
+        lattice_water=lw * site_bd,
+        water_equiv_soil_organic_carbon=soc * site_bd,
+        method="Mar21_mcnp_drf")
+    
+    pred_UTS_g = pred_UTS/site_bd +lw + soc
+    
+    row = {'N_pvisd_Des': Ncal_Des_st_d, 'N_pisd_UTS': Ncal_UTS_st_d, 'Sample_total_swc_g': GRAV_swc_tot_g, 'swc_g': swc_g, 'swc_g_sd':swc_g_sd, 'Pred_Des':pred_Des, 'Pred_UTS': pred_UTS_g, 
+           'TDR_total_swc_g': TDR_swc_tot_g, 'bd': site_bd, 
            'lw': lw, 'soc_water': soc, 'Porosity': porosity, 'Elev': elev, 'Canopy': Canopy, 'landCoverClass': LC, 'OldName': THIS_SITE_old, 'NewName': THIS_SITE_new, 
            'CalStart': cal_dt_first, 'CalEnd': cal_dt_last, 'SampDate': sample_dt_start[THIS_SITE_old], 'airRH': p_uts_df['airRH'].mean(), 'airT': p_uts_df['airT'].mean(), 'Rhov_cal_g_cm3': Rhov_cal_g,
             'WeightedTDR': cal_data['WeightedTDR_SWC'].mean(), 
             'BWE_mm': BWE, 'BWE_uncer': BWE_uncer,
             'Port_raw_mod_cph': N_raw_p, 'Stationary_raw_mod_cph':N_raw_s, 'Raw_Mod_cv':cal_data['Raw_Mod_Coeff_of_Var'].mean(), 'Raw_Mod_sqrt':cal_data['Raw_Mod_sqrt'].mean(),
-           'N0_fit_Des': N0_Des, 'N0_fit_UTS': N0_UTS, 
+           'N0_fit_Des': N0_Des, 'N0_fit_UTS': ND_UTS, 
            'N_ratio_raw': N_ratio_raw,
            'QA1': QA1, 'QA2': QA2}
     
     rows.append(row)
 
 out_df = pd.DataFrame(rows)
+out_df.sort_values('NewName', inplace=True)
+out_df.reset_index(drop=True, inplace=True)  # keep index aligned with positional access for LOOCV
 
+
+
+out_df_use = out_df.copy()
+
+# Publication-ready calibration summary (2 sig figs)
+out_df_pub = out_df.copy().sort_values('NewName')
+numeric_cols_out = out_df_pub.select_dtypes(include=[np.number]).columns
+out_df_pub[numeric_cols_out] = out_df_pub[numeric_cols_out].applymap(lambda v: round_sigfig(v, 2))
+out_df_pub.to_csv(f'{outDir}\\Site_data_summary_publication.csv', index=False)
 
 # CALIBRATE N0 WITH LOOCV
 
-possible = list(range(len(out_df)))
+possible = list(range(len(out_df_use)))
 
 for i in possible:
     select = [j for j in possible if j != i] # select all but one index
-    subset = out_df.iloc[select, :]
+    subset = out_df_use.iloc[select, :]
     
     # make sure values are reset for each loop:
     theta_tot = None
@@ -413,22 +474,20 @@ for i in possible:
     theta_pred = None
     residual = None
     
-    N_val = out_df.iloc[i, :]['N_pvisd_Des']
-    theta_tot_val = float(out_df.iloc[i, :]['Sample_total_swc_g'])
+    N_val = out_df_use.iloc[i, :]['N_pvisd_Des']
+    theta_tot_val = float(out_df_use.iloc[i, :]['Sample_total_swc_g'])
     theta_pred = model(N_val, *popt)
     residual = theta_tot_val - theta_pred
 
-    out_df.loc[i,'Des_resid_loocv_N0'] = residual
-    out_df.loc[i,'Des_pred_loocv_N0'] = theta_pred
-    out_df.loc[i,'Des_obs_loocv_N0'] = theta_tot_val
+    out_df_use.loc[i,'Des_resid_loocv_N0'] = residual
+    out_df_use.loc[i,'Des_pred_loocv_N0'] = theta_pred
+    out_df_use.loc[i,'Des_obs_loocv_N0'] = theta_tot_val
     
 # Calculate stats (RMSE, ubRMSE, R2, KGE)
 
-Des_loocv_fit = kling_gupta_efficiency(out_df['Des_pred_loocv_N0'], out_df['Des_obs_loocv_N0'])
+Des_loocv_fit = kling_gupta_efficiency(out_df_use['Des_pred_loocv_N0'], out_df_use['Des_obs_loocv_N0'])
 
-# First, remove C4, because proper calibration data is not available
 
-out_df_use = out_df.drop(out_df[out_df['NewName']=='C4'].index).copy()
 
 # calculate stats without outliers
 
@@ -445,6 +504,7 @@ print(f"Lower Bound: {lower_iqr_bound}")
 print(f"Upper Bound: {upper_iqr_bound}")
 
 iqr_outliers = [x for x in out_df_use['Des_resid_loocv_N0'] if x < lower_iqr_bound or x > upper_iqr_bound]
+iqr_outliers = [x for x in out_df_use['Des_resid_loocv_N0'] if x < lower_iqr_bound or x > upper_iqr_bound]
 iqr_outliers_rowsD = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper_iqr_bound) | (out_df_use['Des_resid_loocv_N0']<lower_iqr_bound))]
 print(f"Outliers from IQR: {iqr_outliers}")
 
@@ -455,6 +515,7 @@ mean_resid = np.mean(out_df_use['Des_resid_loocv_N0'])
 upper = mean_resid + 2*sd_resid
 lower = mean_resid - 2*sd_resid
 
+outliers = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper) | (out_df_use['Des_resid_loocv_N0']<lower))]
 outliers = out_df_use[((out_df_use['Des_resid_loocv_N0']>upper) | (out_df_use['Des_resid_loocv_N0']<lower))]
 print(f"Outliers from standard deviation: {outliers}")
 
@@ -529,9 +590,10 @@ plt.show()
 
 '''
 # single N0 to save using all data points
-theta_tot = out_df['Sample_total_swc_g'].astype(float).values
-N = out_df['N_pvisd_Des'].values
-N0_start_all = N.mean()
+theta_tot = out_df_use['Sample_total_swc_g'].astype(float).values
+N = out_df_use['N_pvisd_Des'].values
+N0_start_all_des = N.mean()
+
 # Bootstrap parameters
 n_bootstrap = 1000  # Number of resamples
 N0_bootstrap = []
@@ -561,7 +623,7 @@ popt = None
 N0_fit_Des = None
 
 # Fit the model using curve_fit (nonlinear least squares)
-popt, pcov = curve_fit(model, N, theta_tot, p0=[N0_start_all])
+popt, pcov = curve_fit(model, N, theta_tot, p0=[N0_start_all_des])
 
 # Extract fitted N0
 N0_fit_Des = popt[0]
@@ -571,21 +633,9 @@ Des_N0 = ['Des_N0', N0_fit_Des, CI_lower_Des, CI_upper_Des]
 # find residuals for predictions from N0 fit to all samples
 pred = model(N, *popt) # predict total water content (g/g)
 Des_resid = theta_tot - pred
-out_df['Des_resid_N0_fit_to_all'] = Des_resid
+out_df_use['Des_resid_N0_fit_to_all'] = Des_resid
 
 # UTS METHOD #############################################################################
-'''
-
-# need absolute air humidity in g/cm^3
-RH_cal = out_df['airRH']
-T_cal = out_df['airT']
-Rhov_cal, _ = calculate_watervapor(
-RH_cal, T_cal, Config.gama
-) # output in kg/m^3
-
-out_df['Rhov_cal_g_cm3'] = Rhov_cal/1000 # in g/cm^3
-'''
-
 
 # Objective function to minimize: total absolute difference over all rows
 
@@ -651,11 +701,11 @@ def objective2(N0, df, verbose=False):
   
 # Do LOOCV with soil samples for UTS:
 
-possible = list(range(len(out_df)))
+possible = list(range(len(out_df_use)))
 
 for i in possible:
     select = [j for j in possible if j != i] # select all but one index
-    subset = out_df.iloc[select, :]
+    subset = out_df_use.iloc[select, :]
 
     # Assuming df is your pandas DataFrame with 'Avg_N0', 'theta_tot', and 'Npvi'
     N0_start = subset['N_pisd_UTS'].mean()
@@ -665,7 +715,7 @@ for i in possible:
 
     # Run the minimizer
     res = None
-    res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded') # recall that args expects a tuple
+    res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded')
 
     # Best-fit N0 value
     N0_UTS = None
@@ -673,8 +723,8 @@ for i in possible:
     print(f"Best-fitting N0 from UTS fit is: {N0_UTS:.2f}")
 
     # Use best-fit N0 to generate predictions
-    val = out_df.iloc[i, :].to_frame().T # data used to validate
-    theta_tot_val = out_df.iloc[i, :]['Sample_total_swc_g'] #swc used to validate
+    val = out_df_use.iloc[i, :].to_frame().T # data used to validate
+    theta_tot_val = out_df_use.iloc[i, :]['Sample_total_swc_g'] #swc used to validate
     
     theta_pred_pore_volumetric = val.apply(
         lambda row: convert_neutrons_to_soil_moisture_uts(
@@ -692,14 +742,13 @@ for i in possible:
     theta_pred_UTS = theta_pred_pore_volumetric/val['bd'] + val['lw'] + val['soc_water']
     residual_uts = theta_tot_val - theta_pred_UTS.item()
     
-    out_df.loc[i,'UTS_Resid_loocv_N0'] = residual_uts
-    out_df.loc[i,'UTS_pred_loocv_N0'] = theta_pred_UTS.item()
-    out_df.loc[i,'UTS_obs_loocv_N0'] = theta_tot_val
+    out_df_use.loc[i,'UTS_Resid_loocv_N0'] = residual_uts
+    out_df_use.loc[i,'UTS_pred_loocv_N0'] = theta_pred_UTS.item()
+    out_df_use.loc[i,'UTS_obs_loocv_N0'] = theta_tot_val
     
-UTS_loocv_fit = kling_gupta_efficiency(out_df['UTS_pred_loocv_N0'], out_df['UTS_obs_loocv_N0'])
+UTS_loocv_fit = kling_gupta_efficiency(out_df_use['UTS_pred_loocv_N0'], out_df_use['UTS_obs_loocv_N0'])
 
 # identify outliers
-out_df_use = out_df.drop(out_df[out_df['NewName']=='C4'].index).copy()
 
 # find outliers using inter quartile range
 Q1 = np.percentile(out_df_use['UTS_Resid_loocv_N0'], 25)
@@ -749,6 +798,7 @@ for i in possible:
     # Run the minimizer
     res = None
     res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded')
+    res = minimize_scalar(objective2, args=(subset,), bounds=(N0_start, N0_start + 6000), method='bounded')
 
     # Best-fit N0 value
     N0_UTS = None
@@ -783,8 +833,9 @@ for i in possible:
 UTS_loocv_fit_keep = kling_gupta_efficiency(keep_df2_uts['UTS_pred_loocv_N0'], keep_df2_uts['UTS_obs_loocv_N0'])
 
 # single N0 to save using all data points
-theta_tot = out_df['Sample_total_swc_g'].astype(float).values
-N = out_df['N_pisd_UTS'].values
+theta_tot = out_df_use['Sample_total_swc_g'].astype(float).values
+N = out_df_use['N_pisd_UTS'].values
+N0_start_all_uts = N.mean()
 N0_start_all_uts = N.mean()
 
 # Bootstrap parameters
@@ -793,8 +844,9 @@ N0_bootstrap_UTS = []
 
 # Perform bootstrap resampling
 for i in range(n_bootstrap):
-    sample_df = out_df.sample(n=len(out_df), replace=True)
+    sample_df = out_df_use.sample(n=len(out_df_use), replace=True)
     try:
+        res_bs = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(sample_df, False))
         res_bs = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(sample_df, False))
         if res_bs.success and np.isfinite(res_bs.fun):
             N0_bootstrap_UTS.append(res_bs.x)
@@ -808,13 +860,13 @@ CI_lower_UTS, CI_upper_UTS = np.percentile(N0_bootstrap_UTS, [2.5, 97.5])
 
 print(f"95% Bootstrap Confidence Interval for N0: ({CI_lower_UTS:.4f}, {CI_upper_UTS:.4f})")
 
-res_single_N0 = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(out_df, False))
+res_single_N0 = minimize_scalar(objective2, bounds=(N0_start_all_uts, N0_start_all_uts + 6000), method='bounded', args=(out_df_use, False))
 single_UTS_N0 = res_single_N0.x
 
 UTS_ND = ['UTS_ND', single_UTS_N0, CI_lower_UTS, CI_upper_UTS]
 
 # get residuals from predictions using N0 fit to all data
-pred_pore_volumetric = out_df.apply(
+pred_pore_volumetric = out_df_use.apply(
      lambda row: convert_neutrons_to_soil_moisture_uts(
          neutron_count=row['N_pisd_UTS'],
          n0=single_UTS_N0,
@@ -826,15 +878,50 @@ pred_pore_volumetric = out_df.apply(
      ), 
      axis=1
  ) 
-pred_tot_g_uts = pred_pore_volumetric/out_df['bd'] + out_df['lw'] + out_df['soc_water']
+pred_tot_g_uts = pred_pore_volumetric/out_df_use['bd'] + out_df_use['lw'] + out_df_use['soc_water']
 UTS_resid = theta_tot - pred_tot_g_uts
-out_df['UTS_resid_N0_fit_to_all'] = UTS_resid
+out_df_use['UTS_resid_N0_fit_to_all'] = UTS_resid
+
+# Paired t-test on LOOCV residuals (Des vs UTS)
+paired_resids = out_df_use[['Des_resid_loocv_N0', 'UTS_Resid_loocv_N0']].dropna()
+paired_resids[['sq_des_resid', 'sq_uts_resid']] = paired_resids[['Des_resid_loocv_N0', 'UTS_Resid_loocv_N0']]**2
+
+ttest_stat, ttest_p = ttest_rel(paired_resids['sq_des_resid'], paired_resids['sq_uts_resid'])
+ttest_df = pd.DataFrame([{
+    'Test': 'Paired t-test for diff in mean Des vs UTS squared residuals',
+    't statistic': round_sigfig(ttest_stat, 2),
+    'p-value': round_sigfig(ttest_p, 2),
+    'n paired': int(len(paired_resids))
+}])
+
+ttest_df.to_csv(f'{outDir}\\Residual_ttest_LOOCV.csv', index=False)
 
 # add to df to save
 N0_ls = [Des_N0, UTS_ND]
 colnames = ['Param', 'Fit', 'Lower 95 CI', 'Upper 95 CI']
 N0_df = pd.DataFrame(N0_ls, columns=colnames)
 N0_df.to_csv(f'{outDir}\\Parameter_fit.csv')
+
+# Publication-ready residual summary by land-cover (Canopy)
+resid_summary_rows = []
+for canopy, grp in out_df_use.groupby('Canopy'):
+    for method, col in [('Des', 'Des_resid_N0_fit_to_all'), ('UTS', 'UTS_resid_N0_fit_to_all')]:
+        vals = grp[col].dropna()
+        if vals.empty:
+            continue
+        mean_resid = vals.mean()
+        rmse = np.sqrt(np.mean(vals**2))
+        resid_summary_rows.append({
+            'Land Cover': canopy,
+            'Method': method,
+            'Mean Residual (g/g)': mean_resid,
+            'RMSE (g/g)': rmse
+        })
+
+resid_summary_df = pd.DataFrame(resid_summary_rows)
+numeric_cols_resid = [c for c in resid_summary_df.columns if c not in ['Land Cover', 'Method']]
+resid_summary_df[numeric_cols_resid] = resid_summary_df[numeric_cols_resid].applymap(lambda v: round_sigfig(v, 2))
+resid_summary_df.to_csv(f'{outDir}\\Universal_cal_residual_summary_by_landcover.csv', index=False)
 
 #SAVE THE LOOCV FIT STATS
 
@@ -844,5 +931,217 @@ save_ls= [Des_loocv_fit, Des_loocv_fit_keep, UTS_loocv_fit, UTS_loocv_fit_keep]
 save_df = pd.concat(save_ls, ignore_index=True)
 save_df['label'] = ['Des_full', 'Des_sans_outliers', 'UTS_full', 'UTS_sans_outliers']
 
+ubrmse_vol_map = {
+    'Des_full': compute_ubrmse_volumetric(out_df_use['Des_pred_loocv_N0'], out_df_use['Des_obs_loocv_N0'], out_df_use['bd']),
+    'Des_sans_outliers': compute_ubrmse_volumetric(keep_df2['Des_pred_loocv_N0_2'], keep_df2['Des_obs_loocv_N0_2'], keep_df2['bd']),
+    'UTS_full': compute_ubrmse_volumetric(out_df_use['UTS_pred_loocv_N0'], out_df_use['UTS_obs_loocv_N0'], out_df_use['bd']),
+    'UTS_sans_outliers': compute_ubrmse_volumetric(keep_df2_uts['UTS_pred_loocv_N0'], keep_df2_uts['UTS_obs_loocv_N0'], keep_df2_uts['bd'])
+}
+
+publication_cols = ['label', 'KGE', 'r', 'beta', 'gamma', 'r_squared', 'RMSE', 'ubRMSE']
+publication_df = save_df[publication_cols].copy()
+publication_df.rename(columns={
+    'label': 'Fit',
+    'RMSE': 'RMSE (g/g)',
+    'ubRMSE': 'UbRMSE (g/g)'
+}, inplace=True)
+publication_df['UbRMSE (cm^3/cm^3)'] = publication_df['Fit'].map(ubrmse_vol_map)
+
+# Round numeric values to two significant figures for publication-ready output.
+numeric_cols = [col for col in publication_df.columns if col != 'Fit']
+publication_df[numeric_cols] = publication_df[numeric_cols].applymap(lambda v: round_sigfig(v, 2))
+publication_df = publication_df[['Fit', 'KGE', 'r', 'beta', 'gamma', 'r_squared', 'RMSE (g/g)', 'UbRMSE (g/g)', 'UbRMSE (cm^3/cm^3)']]
+
+publication_df.to_csv(f'{outDir}\\LOOCV_stats_publication_ready.csv', index=False)
 save_df.to_csv(f'{outDir}\\LOOCV_stats.csv')
-out_df.to_csv(f'{outDir}\\Site_Calibration_data_summary.csv')
+out_df_use.to_csv(f'{outDir}\\Site_Calibration_data_summary.csv')
+
+out_df.to_csv(f'{outDir}\\Site_data_summary.csv')
+
+# Calculate daily SWC predictions for each site individually
+'''
+# filtered data for predictions: 
+# Use data that's been filtered for outliers and snow:
+directory_path = 'FilteredSnowFreeData_output20251204'
+file_pattern = f'{directory_path}\\*half_hr_20251204.csv'
+file_paths = glob.glob(file_pattern, recursive=True)
+dfs_ls = [pd.read_csv(file_path) for file_path in file_paths]
+site_names_old = [os.path.basename(fp).split('_')[0] for fp in file_paths]
+print(f'Old site names are {site_names_old}')
+site_names_new = [os.path.basename(fp).split('_')[1] for fp in file_paths]
+print(f'New site names are {site_names_new}')
+
+# make dictionary of dataframes using new site names 
+filt_df_dict = dict(zip(site_names_new, dfs_ls))
+'''
+'''
+for n in site_names_new:
+    
+    #n = 'C4'
+            
+    THIS_SITE_new = n
+    
+    sitedata = out_df[out_df['NewName']==THIS_SITE_new]
+    print(sitedata.shape)
+    
+    
+    site_bd = sitedata['bd'].item()
+    lc = sitedata['Canopy'].iloc[0]
+    
+    site_lw = sitedata['lw'].item()
+    site_soc = sitedata['soc_water'].item()
+    
+    # get universal parameters from df:
+    N0_univ = N0_df['Fit'][0]
+    ND_univ = N0_df['Fit'][1]
+    
+    # Assuming df is your pandas DataFrame with 'Avg_N0', 'theta_tot', and 'Npvi'
+    
+    theta_tot = sitedata['Sample_total_swc_g'].astype(float).item()
+    N_Des = sitedata['N_pvisd_Des'].item()
+    N_UTS = sitedata['N_pisd_UTS'].item()
+    
+    # Find N0 based on single gravimetric sample value with Desilets method
+    N0_fit_Des = sitedata['N0_fit_Des'].item()
+    
+    print(f'N0 from Desilets fit for {THIS_SITE_new} ( {lc} ) is: {N0_fit_Des}')
+    
+    # use N0_fitted to predict swc at site
+    THIS_SITE_old = new_to_old_name[THIS_SITE_new]
+    
+    # Find weighted TDR value corresponding to gravimetric sampling day
+    site_df = df_dict[THIS_SITE_new].copy() # use same unfiltered data as above, seems like the filtered data removes calibration days
+    
+    # estimate soil moisture for all snow-free days using Desilets equation
+    tau = site_lw +site_soc
+    
+    f_d = None
+    
+    f_d = sitedata['N_ratio_raw'].item()
+    print(f'f_d = {f_d} for Site {THIS_SITE_new}')
+    site_df['scaled_stationary_N_Des'] = site_df['Corrected_Mod_cph_for_Des']*f_d
+    site_df['scaled_stationary_N_UTS'] = site_df['Corrected_Mod_cph_for_UTS']*f_d
+    
+    site_df['theta_pred_tot_g_Des'] = (0.0808 / (site_df['scaled_stationary_N_Des'] / N0_fit_Des - 0.372) - 0.115)  # totalgravimetric water content
+    site_df['theta_pred_pore_vol_Des'] = (site_df['theta_pred_tot_g_Des']- tau) * site_bd
+    
+    site_df['TDR_pore_swc_g'] = site_df['WeightedTDR_SWC']/site_bd
+    site_df['TDR_tot_swc_g'] = site_df['TDR_pore_swc_g'] + tau
+    
+    site_df['TDR_tot_swc_g_resid_Des'] = site_df['TDR_tot_swc_g'] - site_df['theta_pred_tot_g_Des'] 
+    
+    # filter out rows with nan
+    site_df.dropna(subset = ['TDR_tot_swc_g_resid_Des'], inplace = True)
+    site_df['NewName'] = THIS_SITE_new
+    
+    # now do universal N0 prediction 
+    site_df['swc_univ_N0_pred_tot_g_Des'] =  (0.0808 / (site_df['scaled_stationary_N_Des'] / N0_univ - 0.372) - 0.115)  # totalgravimetric water content
+    site_df['swc_univ_N0_pred_pore_vol_Des'] = (site_df['swc_univ_N0_pred_tot_g_Des'] - tau) * site_bd
+    
+    #Check to see if the predicted SWC at calibration time is correct:
+    
+    samp_date = pd.to_datetime(sitedata['CalStart']).iloc[0].to_pydatetime()
+    site_df['datetime'] = pd.to_datetime(site_df['DateTime'])
+    
+    matches = site_df.loc[site_df['datetime'] == samp_date, 'swc_univ_N0_pred_tot_g_Des']
+
+    if matches.empty:
+        print(f"⚠️ No match for SampDate {samp_date} in daily data for {THIS_SITE_new}.")
+        continue
+    
+    if len(matches) > 1:
+        print(f"⚠️ Multiple matches for SampDate at site {THIS_SITE_new}. Using first one.")
+    
+    pred_twc = matches.iloc[0]
+    obs_twc = sitedata['Sample_total_swc_g'].item()
+    
+    diff = pred_twc - obs_twc
+    print(f"Difference between predicted and observed (g/g) at cal time = {diff:.4f}")
+       
+    # now each site with UTS method
+    
+    # Best-fit N0 UTS value
+    N0_fit_UTS = None
+    N0_fit_UTS = sitedata['N0_fit_UTS'].item()
+    print(f'N0 from UTS fit method at Site {THIS_SITE_new} ( {lc} ) is: {N0_fit_UTS:.2f}')
+     
+    
+    theta_pred_pore_volumetric = site_df.apply(
+        lambda row: convert_neutrons_to_soil_moisture_uts(
+            neutron_count=row['scaled_stationary_N_UTS'],
+            n0=N0_fit_UTS,
+            air_humidity=row['Rhov_g_cm3'],
+            bulk_density= site_bd,
+            lattice_water=site_lw* site_bd,
+            water_equiv_soil_organic_carbon= site_soc * site_bd,
+            method="Mar21_mcnp_drf",
+        ), 
+        axis=1
+    ) 
+    
+    site_df['theta_pred_tot_g_UTS'] = (theta_pred_pore_volumetric/site_bd) + tau
+    site_df['theta_pred_pore_vol_UTS'] = theta_pred_pore_volumetric
+    
+    site_df['TDR_tot_swc_g_resid_UTS'] = site_df['TDR_tot_swc_g'] - site_df['theta_pred_tot_g_UTS'] 
+    
+    # filter out rows with nan in airRH or airT
+    site_df.dropna(subset = ['airRH', 'airT'], inplace = True)
+    site_df['NewName'] = THIS_SITE_new
+    
+    # now do universal ND prediction
+    theta_pred_pore_volumetric_univ = site_df.apply(
+        lambda row: convert_neutrons_to_soil_moisture_uts(
+            neutron_count=row['scaled_stationary_N_UTS'],
+            n0=ND_univ,
+            air_humidity=row['Rhov_g_cm3'],
+            bulk_density= site_bd,
+            lattice_water=site_lw* site_bd,
+            water_equiv_soil_organic_carbon= site_soc * site_bd,
+            method="Mar21_mcnp_drf",
+        ), 
+        axis=1
+    ) 
+    
+    site_df['swc_univ_ND_pred_tot_g_UTS'] = theta_pred_pore_volumetric_univ/site_bd + site_lw+ site_soc
+    site_df['swc_univ_ND_pred_pore_vol_UTS'] = theta_pred_pore_volumetric_univ
+    
+    ## save site-specific predictions
+    site_df.to_csv(f'{outDir}\\{THIS_SITE_new}_UTS_and_Des_{lc}_SiteSpecificN0_predictions.csv')
+    
+    # plot residuals
+    
+    # Create figure and axis
+    fig, ax = plt.subplots()
+    
+    ax.scatter(site_df['scaled_stationary_N_Des'], 
+               site_df['TDR_tot_swc_g_resid_Des'], color='blue', label='Desilets', alpha=0.5)
+    
+    ax.scatter(site_df['scaled_stationary_N_UTS'], 
+               site_df['TDR_tot_swc_g_resid_UTS'], color='orange', label='UTS', alpha = 0.5)
+    
+    #ax.scatter(N, 0, marker='o', facecolors='none', edgecolors='black', label='calibration point')
+    #ax.scatter(N_UTS, 0, marker='o', facecolors='none', edgecolors='black')  # no label to avoid duplicate
+    
+    # Add horizontal line at y = 0
+    ax.axhline(0, color='red', linestyle='--')
+    
+    # Axis labels and title
+    ax.set_xlabel('Moderated Neutron Counts (cph)')
+    ax.set_ylabel(r'Residuals ($\mathrm{g\ g}^{-1}$)')
+    ax.set_title(rf'{THIS_SITE_new} Residual Plot ( $N_{{0}}$ = {N0_fit_Des:.0f})')
+    
+    # Get unique legend entries
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys(), title='Method', bbox_to_anchor=(1.05, 0.5), loc='center left')
+    
+    # Tight layout
+    fig.tight_layout()
+    
+    # Save and show
+    fig.savefig(f'{outDir}\\{THIS_SITE_new}_resid_SiteSpecific_N0_Des_{lc}.png', dpi=300)
+    plt.show()
+    
+    print(f'Saved individual predictions for {THIS_SITE_new}')
+
+'''

@@ -34,7 +34,7 @@ print(f'Bare detector site names are {bare_names}')
 bare_names_dict = dict(zip(bare_names, file_paths_bare))
 
 # load weighted TDR data (Includes corrected moderated counts as well)
-TDR_dir  = "CombineDataWithFunction_output20251029"
+TDR_dir  = "CombineDataWithFunction_output20251120"
 TDR_pattern = f'{TDR_dir}/*.csv'
 TDR_paths = glob.glob(TDR_pattern, recursive = True)
 TDR_dfs = [pd.read_csv(file_path) for file_path in TDR_paths]
@@ -45,7 +45,7 @@ TDR_df_dict = dict(zip(site_names, TDR_dfs))
 print(TDR_df_dict.keys())
 
 # load site-specific variables to calculate total water (bd, soc water, lattice water)
-site_var = pd.read_excel("Data\\Mock Calibration Summary.xlsx")
+site_var = pd.read_excel("Data\\Mock Calibration Summary_20251106.xlsx")
 
 # dataframe used to convert between site naming conventions
 sitenames_df = pd.read_excel('Data\\Data_Release_2024\\Network_paper_site_names.xlsx')
@@ -105,7 +105,12 @@ for s in site_names:
                          (tdr_df['WeightedTDR_SWC'] >= TDR_max-0.1) |
                          (tdr_df['sT_5'] <= 3) |(tdr_df['sT_50'] <= 3))
                         & (tdr_df['date']>start_date) & (tdr_df['date']< end_date)]
-    first_snow_cover = snow_cover['date'].min()
+    # make exception for site R1 because calibration date is 10/18/23
+    if (THIS_SITE_new == 'R1') and (snow_cover['date'].min() < pd.Timestamp('2023-10-19').date()):
+        first_snow_cover = pd.Timestamp('2023-10-19').date()
+    else:
+        first_snow_cover = snow_cover['date'].min()
+       
     last_snow_cover = snow_cover['date'].max()
     print(f'First snow cover date is: {first_snow_cover}')
     print(f'Last snow cover date is: {last_snow_cover}')
