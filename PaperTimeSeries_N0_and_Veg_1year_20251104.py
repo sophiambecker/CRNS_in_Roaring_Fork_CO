@@ -55,7 +55,7 @@ dict_N0 = dict(zip(site_names_new, dfs_N0_ls))
  
 # read in GDD data:
 
-gdd_directory = 'C:\\Users\\sbecker14\\Documents\\CRNS_USGS_Analysis\\Data\\GDD\\output20251120'
+gdd_directory = os.path.join(inDir, 'Data', 'External', 'GDD', 'output20251120')
 gdd_pattern = f'{gdd_directory}\\*seasonal.csv'
 gdd_paths = glob.glob(gdd_pattern, recursive=True)
 gdd_ls = [pd.read_csv(file_path) for file_path in gdd_paths]
@@ -64,7 +64,7 @@ print(f'GDD site names are {site_names_gdd}')
 gdd_dict = dict(zip(site_names_gdd, gdd_ls))
 
 # read in GSI data:
-gsi_directory = 'C:\\Users\\sbecker14\\Documents\\CRNS_USGS_Analysis\\Data\\GSI\\output20251120'
+gsi_directory = os.path.join(inDir, 'Data', 'External', 'GSI', 'output20251120')
 gsi_pattern = f'{gsi_directory}\\*seasonal.csv'
 gsi_paths = glob.glob(gsi_pattern, recursive=True)
 gsi_ls = [pd.read_csv(file_path) for file_path in gsi_paths]
@@ -209,4 +209,7 @@ for s in site_names_new:
     print(f'Saved figure for {THIS_SITE_new}')
     
     all_df.to_csv(f'{outDir}\\{THIS_SITE_new}_veg_variables.csv')
+
+
+
 
