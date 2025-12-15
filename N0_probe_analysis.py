@@ -116,7 +116,7 @@ TotBWE_df.replace('RF 5', 'RF5', inplace=True)
 
 # load summary of site data used for calibration: 
 
-out_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20251204\\Site_data_summary_withC4.csv")
+out_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20251214\\Site_data_summary.csv")
 
 
 # SOLVE N0 with probe data FOR EACH SITE 

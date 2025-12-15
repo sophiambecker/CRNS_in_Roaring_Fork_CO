@@ -559,7 +559,7 @@ plt.show()
 
 # now do with elevation and N0 from gravimetric sample
 
-df_grav = pd.read_csv("Calibration_AnalysisWithKGE_output_20251212\\Site_data_summary.csv")
+df_grav = pd.read_csv("Calibration_AnalysisWithKGE_output_20251214\\Site_data_summary.csv")
 
 # fit line to these
 # fit a linear regression, predict BWE from Bare.mod

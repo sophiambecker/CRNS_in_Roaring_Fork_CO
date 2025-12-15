@@ -29,10 +29,10 @@ RF_veginfo.replace('RF 5', 'RF5', inplace=True)
 veg_dict = dict(zip(RF_veginfo['Original_ID'], RF_veginfo['Grouped Land Cover']))
 
 # load calibration day data: 
-site_var = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251212\\Site_Calibration_data_summary.csv'))
+site_var = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251214\\Site_Calibration_data_summary.csv'))
 
 #load parameter fits
-Param = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251212\\Parameter_fit.csv'))
+Param = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251214\\Parameter_fit.csv'))
 
 # get uncertainty values for gravimetric samples: 
 cal_data = pd.read_excel("Data\\Mock Calibration Summary_20251106.xlsx")

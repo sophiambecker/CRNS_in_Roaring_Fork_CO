@@ -24,7 +24,7 @@ inDir = 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO'
 outDir = os.path.normpath(inDir + os.sep + 'DryPeriods\\output'+stamp) + '\\'   # Set output directory
 if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
-directory_path = 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Calibration_AnalysisWithKGE_output_20251204'
+directory_path = 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Site_specific_predictions_output_20251215'
 file_pattern = f'{directory_path}\\*SiteSpecificN0_predictions.csv'
 file_paths = glob.glob(file_pattern, recursive=True)
 df_ls = [pd.read_csv(file_path) for file_path in file_paths]
@@ -46,10 +46,10 @@ RF_veginfo['Name'] = RF_veginfo['Original_ID']
 veg_dict = dict(zip(RF_veginfo['Name'], RF_veginfo['Grouped Land Cover']))
 
 # load calibration day data: 
-site_var = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251110\\Site_Calibration_data_summary.csv'))
+site_var = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251214\\Site_Calibration_data_summary.csv'))
 
 #load parameter fits
-Param = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251110\\Parameter_fit.csv'))
+Param = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251214\\Parameter_fit.csv'))
 
 #set up dictionary to convert site names
 sitenames_df = pd.read_excel('C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Data\\Data_Release_2024\\Network_paper_site_names.xlsx')
