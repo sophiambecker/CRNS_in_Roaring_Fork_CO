@@ -64,6 +64,7 @@ env/
 /Half_hour_LOOCV.py
 /Half_hour_LOOCV_tweaks.py
 /Calibration_AnalysisWithKGE.py
+/Calibration_AnalysisWithKGE_LOOCV.py
 /Calibration_Plots.py
 /ModCountsProcessing_Des_McJannet.py
 /ModCountsProcessing_UTS_McJannet.py
