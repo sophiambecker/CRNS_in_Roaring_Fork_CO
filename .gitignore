@@ -64,7 +64,7 @@ env/
 .eggs/
 .DS_Store
 # Scripts to ignore
-/Half_hour_LOOCV.py
+/Half_hour_LOOCV_20251212.py
 /Half_hour_LOOCV_tweaks.py
 /Calibration_AnalysisWithKGE.py
 /Calibration_AnalysisWithKGE_LOOCV.py
