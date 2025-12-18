@@ -99,4 +99,6 @@ env/
 CombineDataWithFunction_halfhour_no_fs.py
 /Data/ModCountsProcessing_Des_output_no_fs20251216
 /Data/ModCountsProcessing_UTS_output_no_fs20251216
+/AnalyzeDryPeriods.py
+/DryPeriods/
 *.py
