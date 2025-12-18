@@ -36,6 +36,7 @@
 /CombineDataWithFunction_output20251106/
 /CombineDataWithFunction_output20251119/
 /CombineDataWithFunction_output20251201/
+/FilteredSnowFreeData_output20250813/
 /FilteredSnowFreeData_output20251029/
 /FilteredSnowFreeData_output20251104/
 /FilteredSnowFreeData_output20251105/
@@ -77,3 +78,9 @@ env/
 /Data/MockPortableData/Processed_Portable_Des/
 /Data/MockPortableData/Processed_Portable_UTS/
 /Calibration_AnalysisWithKGE_output_20250813/
+/Calibration_AnalysisWithKGE_output_no_fs_20251216
+/CombineDataWithFunction_half_hr_output_no_fs_20251216
+CombineDataWithFunction_halfhour_no_fs.py
+/Data/ModCountsProcessing_Des_output_no_fs20251216
+/Data/ModCountsProcessing_UTS_output_no_fs20251216
+*.py
