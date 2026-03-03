@@ -27,7 +27,7 @@ if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 
 # get landcover information:
-RF_veginfo = pd.read_csv("C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Data\RoaringFork_CRNS_metadata.csv")
+RF_veginfo = pd.read_csv("C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Data\\RoaringFork_CRNS_metadata.csv")
 RF_veginfo.replace('RF 5', 'RF5', inplace=True) 
 
 #RF_veginfo['Name'] = [s.replace(" ", "") for s in RF_veginfo['Original_ID']]
@@ -37,11 +37,11 @@ veg_dict = dict(zip(RF_veginfo['Name'], RF_veginfo['Land Cover ']))
 
 
 #set up dictionary to convert site names
-sitenames_df = pd.read_excel('C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Data\\Data_Release_2024\\Network_paper_site_names.xlsx')
+sitenames_df = pd.read_excel('C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Data\\Data_Release_2024_b\\Network_paper_site_names.xlsx')
 
 new_to_old_name = dict(zip(sitenames_df['network_paper_new_name'], sitenames_df['Short_name']))
 
-directory_path_N0= 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Calibration_AnalysisWithCorrelation_output_20251205'
+directory_path_N0= 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO\\Calibration_AnalysisWithCorrelation_output_20260211'
 
 N0_file_pattern = f'{directory_path_N0}\\*Probe_Based_Parameters.csv'
 
@@ -80,6 +80,7 @@ for s in site_names_new:
     
     THIS_SITE_old = new_to_old_name[THIS_SITE_new]
     
+    
     df_with_skips = dict_N0[THIS_SITE_new]
     
     df_with_skips['date'] = pd.to_datetime(df_with_skips['date'])  # keep as datetime64
@@ -107,6 +108,9 @@ for s in site_names_new:
     gdd_df['date'] = pd.to_datetime(gdd_df['date'])
     
     all_df = df.merge(gsi_df, on='date', how = 'outer').merge(gdd_df, on='date', how = 'outer')
+    
+    if THIS_SITE_new == 'F1':
+        all_df.loc[all_df['Bare'] > 950, 'Bare'] = pd.NA
     
     bare_mean = np.nanmean(all_df['Bare'])
     bare_rolling = all_df['Bare'].rolling(window = 3).mean()

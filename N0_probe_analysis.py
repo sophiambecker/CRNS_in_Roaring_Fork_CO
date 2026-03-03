@@ -39,15 +39,15 @@ from sklearn.neighbors import LocalOutlierFactor
 
 stamp = dt.datetime.now().strftime("%Y%m%d") 
 Dir = os.getcwd()
-outFold = '\\Calibration_AnalysisWithCorrelation_output_{}'.format(stamp)
+outFold = '\\N0_probe_analysis_output_{}'.format(stamp)
                                                  
 outDir = os.path.normpath(Dir + os.sep + outFold) + '\\'    # Set output directory
 if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 
 # load portable calibration data
-directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20251106'
-directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20251106'
+directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20260210'
+directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20260210'
 port_uts_file_pattern = f'{directory_path_port_uts}\\*.csv'
 port_des_file_pattern = f'{directory_path_port_des}\\*.csv'
 port_uts_paths = glob.glob(port_uts_file_pattern, recursive = True)
@@ -60,7 +60,7 @@ dict_port_des = dict(zip(site_names_old_port_des, dfs_port_des_ls))
 dict_port_uts = dict(zip(site_names_old_port_uts, dfs_port_uts_ls))
 
 # Use data that's been filtered for outliers and snow:
-directory_path = 'FilteredSnowFreeData_output20251120'
+directory_path = 'FilteredSnowFreeData_daily_output20260211'
 file_pattern = f'{directory_path}\\*.csv'
 file_paths = glob.glob(file_pattern, recursive=True)
 dfs_ls = [pd.read_csv(file_path) for file_path in file_paths]
@@ -116,7 +116,7 @@ TotBWE_df.replace('RF 5', 'RF5', inplace=True)
 
 # load summary of site data used for calibration: 
 
-out_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20251214\\Site_data_summary.csv")
+out_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20260210\\Site_data_summary.csv")
 
 
 # SOLVE N0 with probe data FOR EACH SITE 

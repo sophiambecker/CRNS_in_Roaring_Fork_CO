@@ -30,8 +30,8 @@ if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 
 # load portable calibration data
-directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20251106'
-directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20251106'
+directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20260210'
+directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20260210'
 port_uts_file_pattern = f'{directory_path_port_uts}\\*.csv'
 port_des_file_pattern = f'{directory_path_port_des}\\*.csv'
 port_uts_paths = glob.glob(port_uts_file_pattern, recursive = True)
@@ -44,7 +44,7 @@ dict_port_des = dict(zip(site_names_old_port_des, dfs_port_des_ls))
 dict_port_uts = dict(zip(site_names_old_port_uts, dfs_port_uts_ls))
 
 # Use data that's been filtered for outliers and snow:
-directory_path = 'CombineDataWithFunction_half_hr_output20251212'
+directory_path = 'CombineDataWithFunction_half_hr_output_sealevel_pref_20260210'
 file_pattern = f'{directory_path}\\*.csv'
 file_paths = glob.glob(file_pattern, recursive=True)
 dfs_ls = [pd.read_csv(file_path) for file_path in file_paths]
@@ -73,7 +73,7 @@ new_to_old_name = dict(zip(site_names_new, site_names_old))
 
 site_var = pd.read_excel("Data\\Mock Calibration Summary_20251106.xlsx")
 
-# Extract row 16 and columns 1GÇô15
+# Extract row 16 and columns 1GÃ‡Ã´15
 sample_series_start = site_var.iloc[16, 1:16]
 sample_series_end = site_var.iloc[17, 1:16]
 # Convert values to just the date, keep column names (keys) as strings
@@ -190,12 +190,12 @@ def round_sigfig(value, sig=2):
 
 '''
 KGE Interpretation:
-+¦ Value	Interpretation
++Â¦ Value	Interpretation
 1.0	Perfect variability match
 < 1	Model is less variable than observations (too smooth)
 > 1	Model is more variable than observations (too jumpy)
 
-+¦ Value	Interpretation
++Â¦ Value	Interpretation
 1.0	Model has no bias in the mean (perfect)
 < 1	Model underestimates the average value
 > 1	Model overestimates the average value
@@ -1046,11 +1046,11 @@ for n in site_names_new:
     matches = site_df.loc[site_df['datetime'] == samp_date, 'swc_univ_N0_pred_tot_g_Des']
 
     if matches.empty:
-        print(f"GÜán+Å No match for SampDate {samp_date} in daily data for {THIS_SITE_new}.")
+        print(f"GÃœÃ¡n+Ã… No match for SampDate {samp_date} in daily data for {THIS_SITE_new}.")
         continue
     
     if len(matches) > 1:
-        print(f"GÜán+Å Multiple matches for SampDate at site {THIS_SITE_new}. Using first one.")
+        print(f"GÃœÃ¡n+Ã… Multiple matches for SampDate at site {THIS_SITE_new}. Using first one.")
     
     pred_twc = matches.iloc[0]
     obs_twc = sitedata['Sample_total_swc_g'].item()

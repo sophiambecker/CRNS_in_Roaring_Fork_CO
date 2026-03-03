@@ -35,8 +35,8 @@ if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 
 # load portable calibration data
-directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20251106'
-directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20251106'
+directory_path_port_des = 'Data\\MockPortableData\\Processed_ALlRF_Des_output20260210'
+directory_path_port_uts = 'Data\\MockPortableData\\Processed_ALlRF_UTS_output20260210'
 port_uts_file_pattern = f'{directory_path_port_uts}\\*.csv'
 port_des_file_pattern = f'{directory_path_port_des}\\*.csv'
 port_uts_paths = glob.glob(port_uts_file_pattern, recursive = True)
@@ -49,7 +49,7 @@ dict_port_des = dict(zip(site_names_old_port_des, dfs_port_des_ls))
 dict_port_uts = dict(zip(site_names_old_port_uts, dfs_port_uts_ls))
 
 # Use data that's been filtered for outliers and snow:
-directory_path = 'CombineDataWithFunction_half_hr_output20251212'
+directory_path = 'CombineDataWithFunction_half_hr_output_sealevel_pref_20260210'
 file_pattern = f'{directory_path}\\*.csv'
 file_paths = glob.glob(file_pattern, recursive=True)
 dfs_ls = [pd.read_csv(file_path).copy() for file_path in file_paths]
@@ -114,9 +114,9 @@ TotBWE_ls = [df[['Site', 'BWE Representing 200 m Radius Footprint (mm)','BWE Unc
 # Concatenate the list of DataFrames into a single DataFrame
 TotBWE_df = pd.concat(TotBWE_ls, ignore_index=True)
 TotBWE_df.replace('RF 5', 'RF5', inplace=True)
-out_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20251214\\Site_data_summary.csv")
+out_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20260210\\Site_data_summary.csv")
 
-N0_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20251214\\Parameter_fit.csv")
+N0_df = pd.read_csv("Calibration_AnalysisWithKGE_output_20260210\\Parameter_fit.csv")
 
 # load daily precip (PRISM) for snow screening
 precip_df = pd.read_csv("Data\\DailyPRISM_Ppt.csv")

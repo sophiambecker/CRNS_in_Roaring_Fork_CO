@@ -50,7 +50,7 @@ def process_local(df: pd.DataFrame) -> None:
     Site = df['site'][0]
     site_id = df['Site ID'][0]
     site_variables = {'lat':site_var[Site][3], 'long': site_var[Site][4], 'elev':site_var[Site][6],
-          'lw': site_var[Site][26], 'soc': site_var[Site][29], 'bda': site_var[Site][24], 'swc_weighted':site_var[Site][18]}
+          'lw': site_var[Site][26], 'soc': site_var[Site][29], 'bda': site_var[Site][24], 'swc_weighted':site_var[Site][18], 'CalDate': start_date}
   
     df.rename(columns={"Message Date": "message_date", "T7 C":"t7_c", "H7 %":"h7_pct", 
                "N1/Samp": "n1_persamp", "N2/Samp": "n2_persamp", "N3/Samp": "n3_persamp", "E1": "e1", "P1 (mb)":"p1_mb"}, inplace=True) 
@@ -71,7 +71,8 @@ def process_local(df: pd.DataFrame) -> None:
     
     
     H = (elev * Config.r0) / (elev + Config.r0)
-    pref = Config.P0 * (1 + Config.L / Config.trefK * H) ** Config.alpha
+    #pref = Config.P0 * (1 + Config.L / Config.trefK * H) ** Config.alpha
+    pref = 1013.25
     fscal, _, Lpt = get_correction_parameters(pref, lat, long, yeari)
     
     fsol_df = get_fi_over_time(pref, lat, long)
@@ -169,7 +170,7 @@ def process_local(df: pd.DataFrame) -> None:
     fv = 1.0 + 0.0021 * (rhov - rhovref) * 1000 # changed for bare detector from 0.0054 to 0.0021
     fi = grouped.fidum.values
     fb = 1 / (1 - Config.eta * grouped.BWE)
-    Npvibs = grouped.Bare * fp * fv * fi * fb * fscal
+    Npvibs = grouped.Bare * fp * fv * fi * fb 
     grouped["Npvibs"] = Npvibs
     
     cd1 = datenum(dt.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S"))

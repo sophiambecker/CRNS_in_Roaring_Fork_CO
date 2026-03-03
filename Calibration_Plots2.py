@@ -29,10 +29,10 @@ RF_veginfo.replace('RF 5', 'RF5', inplace=True)
 veg_dict = dict(zip(RF_veginfo['Original_ID'], RF_veginfo['Grouped Land Cover']))
 
 # load calibration day data: 
-site_var = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251214\\Site_Calibration_data_summary.csv'))
+site_var = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20260210\\Site_Calibration_data_summary.csv'))
 
 #load parameter fits
-Param = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20251214\\Parameter_fit.csv'))
+Param = pd.read_csv(os.path.join(inDir, 'Calibration_AnalysisWithKGE_output_20260210\\Parameter_fit.csv'))
 
 # get uncertainty values for gravimetric samples: 
 cal_data = pd.read_excel("Data\\Mock Calibration Summary_20251106.xlsx")
@@ -223,7 +223,7 @@ fig.legend(handles = marker_handles, labels = marker_labels,
            prop={'size': 11})
 
 ax1.set_title("(a)", fontsize=14, fontweight='bold')
-ax1.set_xlabel(r'Daily Avg. $N_{pvisd}$ (cph)', fontsize = 14)
+ax1.set_xlabel(r'Daily Avg. $N_{pvid}$ (cph)', fontsize = 14)
 ax1.set_ylabel(r'$\theta_p + \theta_{lw} + \theta_{SOC}$ (g g$^{-1}$)', fontsize=14)
 ax1.set_ylim(-0.01, 0.75)
 ax1.set_xlim(2000, 4000)
@@ -240,10 +240,10 @@ ax2.scatter(site_var['N_pvisd_Des'], site_var['Des_resid_N0_fit_to_all'],
 ax2.axhline(y=0, color='black', linestyle='--', linewidth=1)
 ax2.axhline(y=mean_resid_des, color='red', linewidth=1)
 #ax2.fill_between(N, lower_des, upper_des, color='red', alpha=0.3, zorder=2)
-ax2.axhline(y = upper_iqr_bound_Des, color = 'red', linestyle='--', linewidth=1)
-ax2.axhline(y = lower_iqr_bound_Des, color = 'red', linestyle='--', linewidth=1)
+ax2.axhline(y = upper_des, color = 'red', linestyle='--', linewidth=1)
+ax2.axhline(y = lower_des, color = 'red', linestyle='--', linewidth=1)
 ax2.set_title("(b)", fontsize=14, fontweight='bold')
-ax2.set_xlabel(r'Daily Avg. $N_{pvisd}$ (cph)', fontsize = 14)
+ax2.set_xlabel(r'Daily Avg. $N_{pvid}$ (cph)', fontsize = 14)
 ax2.set_ylabel(r'Obs. - Pred. (g g$^{-1}$)', fontsize=14)
 ax2.set_ylim(-0.2, 0.2)
 ax2.set_xlim(2000, 4000)
@@ -258,10 +258,10 @@ ax3.scatter(site_var['N_pisd_UTS'], site_var['UTS_resid_N0_fit_to_all'],
 ax3.axhline(y=0, color='black', linestyle='--', linewidth=1)
 ax3.axhline(y=mean_resid_uts, color='red', linewidth=1)
 #ax3.fill_between(N, lower_uts, upper_uts, color='red', alpha=0.3, zorder=2)
-ax3.axhline(y = upper_iqr_bound_UTS, color = 'red', linestyle = '--', linewidth = 1)
-ax3.axhline(y = lower_iqr_bound_UTS, color = 'red', linestyle = '--', linewidth = 1, label = 'IQR Bound')
+ax3.axhline(y = upper_uts, color = 'red', linestyle = '--', linewidth = 1)
+ax3.axhline(y = lower_uts, color = 'red', linestyle = '--', linewidth = 1, label = 'IQR Bound')
 ax3.set_title("(c)", fontsize=14, fontweight='bold')
-ax3.set_xlabel(r'Daily Avg. $N_{pisd}$ (cph)', fontsize = 14)
+ax3.set_xlabel(r'Daily Avg. $N_{pid}$ (cph)', fontsize = 14)
 ax3.set_ylabel(r'Obs. - Pred. (g g$^{-1}$)', fontsize=14)
 ax3.set_ylim(-0.2, 0.2)
 ax3.set_xlim(2000, 4000)
@@ -274,7 +274,7 @@ fig.legend(handles = [Line2D([0], [0], marker = 'none',  color='red', label="mea
                       Line2D([0], [0], marker = 'none', linestyle='--', color='red', label="IQR Bound",
                              linewidth=1)],
                        
-           labels = ['Mean', "IQR \nOutlier \nThreshold",],
+           labels = ['Mean', "\n2 SD \nThreshold",],
            bbox_to_anchor=(0.80, 0.20),  
            loc='center left', frameon=False,
            prop={'size': 11})

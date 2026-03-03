@@ -18,13 +18,13 @@ from sklearn.neighbors import LocalOutlierFactor
 # set up directory
 stamp = datetime.now().strftime("%Y%m%d")
 inDir = 'C:\\Users\\sbecker14\\Documents\\GitHub\\CRNS_in_Roaring_Fork_CO'
-outDir = os.path.normpath(inDir + os.sep + '\\FilteredSnowFreeData_output'+stamp) + '\\'   # Set output directory
+outDir = os.path.normpath(inDir + os.sep + '\\FilteredSnowFreeData_daily_output'+stamp) + '\\'   # Set output directory
 if not os.path.exists(outDir): os.makedirs(outDir) # Create output directory
 
 os.chdir(inDir)
 
 # load corrected bare neutron counts
-file_directory_crns = os.path.normpath(inDir + os.sep + '\\mock_Bare_output20250812')
+file_directory_crns = os.path.normpath(inDir + os.sep + '\\mock_Bare_output20260210')
 file_pattern_bare = f'{file_directory_crns}\\Bare*'
 file_paths_bare = glob.glob(file_pattern_bare, recursive=True)
 
@@ -34,7 +34,7 @@ print(f'Bare detector site names are {bare_names}')
 bare_names_dict = dict(zip(bare_names, file_paths_bare))
 
 # load weighted TDR data (Includes corrected moderated counts as well)
-TDR_dir  = "CombineDataWithFunction_output20251120"
+TDR_dir  = "CombineDataWithFunction_daily_output20260211"
 TDR_pattern = f'{TDR_dir}/*.csv'
 TDR_paths = glob.glob(TDR_pattern, recursive = True)
 TDR_dfs = [pd.read_csv(file_path) for file_path in TDR_paths]
@@ -48,7 +48,7 @@ print(TDR_df_dict.keys())
 site_var = pd.read_excel("Data\\Mock Calibration Summary_20251106.xlsx")
 
 # dataframe used to convert between site naming conventions
-sitenames_df = pd.read_excel('Data\\Data_Release_2024\\Network_paper_site_names.xlsx')
+sitenames_df = pd.read_excel('Data\\Data_Release_2024_b\\Network_paper_site_names.xlsx')
 name_dict = sitenames_df.set_index('network_paper_new_name')['Short_name'].to_dict()
 
 
@@ -146,7 +146,7 @@ for s in site_names:
     
     # filter with min/max
     # step 1
-    bare_df.drop(bare_df[(bare_df['bare_nc_cph']<600) | (bare_df['bare_nc_cph']>3000)].index, inplace = True)
+    bare_df.drop(bare_df[(bare_df['bare_nc_cph']<500) | (bare_df['bare_nc_cph']>5000)].index, inplace = True)
     # step 2
     bare_max = np.nanmean(bare_df['bare_nc_cph'])+ 3* np.nanstd(bare_df['bare_nc_cph'])
     bare_min = np.nanmean(bare_df['bare_nc_cph'])- 3* np.nanstd(bare_df['bare_nc_cph'])
