@@ -1,0 +1,9 @@
+Land Cover,Method,Mean r,Mean N0
+Universal,Des,0.913,4560.0
+Universal,UTS,0.874,6783.0
+forest,Des,0.93,4498.0
+forest,UTS,0.893,6536.0
+half-forest,Des,0.898,4586.0
+half-forest,UTS,0.856,7020.0
+non-forest,Des,0.918,4511.0
+non-forest,UTS,0.885,6481.0

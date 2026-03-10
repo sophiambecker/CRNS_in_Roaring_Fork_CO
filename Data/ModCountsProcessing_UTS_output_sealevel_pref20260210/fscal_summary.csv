@@ -1,0 +1,16 @@
+site_code,site_name,fscal
+C1,Crys 2,1.046
+C2,Crys 1,1.046
+C3,Crys 3,1.046
+C4,Crys 6,1.043
+F1,RF 1,1.043
+F2,Fry 4,1.044
+F3,Fry 5,1.044
+F4,Fry 6,1.043
+R1,RF 2,1.044
+R2,RF 3,1.046
+R3,RF 7,1.045
+R4,RF5,1.044
+R5,RF 6,1.044
+R6,RF 9,1.045
+R7,RF 8,1.042
