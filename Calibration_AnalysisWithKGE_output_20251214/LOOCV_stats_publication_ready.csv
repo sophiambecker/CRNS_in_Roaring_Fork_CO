@@ -1,5 +1,0 @@
-Fit,KGE,r,beta,gamma,r_squared,RMSE (g/g),UbRMSE (g/g),UbRMSE (cm^3/cm^3)
-Des_full,0.75,0.84,0.96,1.2,0.6,0.058,0.057,0.062
-Des_sans_outliers,0.85,0.91,0.98,1.1,0.78,0.043,0.042,0.044
-UTS_full,0.79,0.82,0.99,0.89,0.67,0.053,0.052,0.058
-UTS_sans_outliers,0.77,0.89,1.0,0.8,0.78,0.043,0.043,0.046
