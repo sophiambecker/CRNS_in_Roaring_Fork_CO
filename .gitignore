@@ -1,7 +1,8 @@
 *.pyc
 /Calibration_AnalysisWithKGE_output_20251030
 /Calibration_AnalysisWithKGE_output_20251031
-# Generated outputs not used as inputs
+# Generated outputs not used as inputs (all dated run artifacts)
+*output*/
 /Calibration_AnalysisWithCorrelation_output_20251111/
 /Calibration_AnalysisWithCorrelation_output_20251114/
 /Calibration_AnalysisWithCorrelation_output_20251120/
