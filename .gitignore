@@ -102,7 +102,7 @@ CombineDataWithFunction_halfhour_no_fs.py
 /Data/ModCountsProcessing_UTS_output_no_fs20251216
 /AnalyzeDryPeriods.py
 /DryPeriods/
-*.py
+
 Calibration_AnalysisWithCorrelation_output_20260210/all_Des_forest_SingleN0_predictions.csv
 Calibration_AnalysisWithCorrelation_output_20251205/C1_Probe_Based_Parameters.csv
 /Calibration_AnalysisWithCorrelation_output_20251205

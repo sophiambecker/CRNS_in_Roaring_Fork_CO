@@ -110,7 +110,7 @@ for s in site_names_new:
     all_df = df.merge(gsi_df, on='date', how = 'outer').merge(gdd_df, on='date', how = 'outer')
     
     if THIS_SITE_new == 'F1':
-        all_df.loc[all_df['Bare'] > 950, 'Bare'] = pd.NA
+         all_df.loc[all_df['Bare'] > 950, 'Bare'] = pd.NA
     
     bare_mean = np.nanmean(all_df['Bare'])
     bare_rolling = all_df['Bare'].rolling(window = 3).mean()
