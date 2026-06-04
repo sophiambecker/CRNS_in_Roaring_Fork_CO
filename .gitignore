@@ -84,11 +84,23 @@ env/
 # Scripts to ignore
 /Half_hour_LOOCV_20251212.py
 /Half_hour_LOOCV_tweaks.py
+/Half_hour_LOOCV_no_fs.py
 /Calibration_AnalysisWithKGE.py
 /Calibration_AnalysisWithKGE_LOOCV.py
 /Calibration_Plots.py
 /ModCountsProcessing_Des_McJannet.py
 /ModCountsProcessing_UTS_McJannet.py
+/ModCountsProcessing_Des_McJannet20251120.py
+/ModCountsProcessing_UTS_McJannet20251120.py
+/ModCountsProcessing_Des_McJannet20251120 _no_fs.py
+/ModCountsProcessing_UTS_McJannet20251120_no_fs.py
+/FilteredSnowFreeDataForEachSite.py
+/FilterSnowFreeDataForEachSite_half_hour.py
+/FilteredSnowFreeDataForEachSite_half_hour_sealevel_pref_record_filtering.py
+/CombineDataWithFunction.py
+/CombineDataWithFunction_halfhour.py
+/N0_analyses_no_fs.py
+
 # Outputs used only by the above scripts
 /FilteredSnowFreeData_output20250813/
 /Calibration_AnalysisWithKGE_output_20251025/
