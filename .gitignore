@@ -145,3 +145,7 @@ Calibration_AnalysisWithCorrelation_output_20251205/C1_Probe_Based_Parameters.cs
 /FilteredSnowFreeData_output_sealevel_pref20260114
 /mock_Bare_output20250812
 /PaperTimeseries
+
+#Data that's not used
+/Data/UntrackedData
+/UntrackedScripts
