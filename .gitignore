@@ -1,6 +1,11 @@
 *.pyc
 /Calibration_AnalysisWithKGE_output_20251030
 /Calibration_AnalysisWithKGE_output_20251031
+/FilteredSnowFreeData_output_sealevel_pref20260402/
+/FilteredSnowFreeData_output_sealevel_pref20260403/
+/tmp_network_names.zip
+/tmp_network_names/
+
 # Generated outputs not used as inputs (all dated run artifacts)
 
 /Calibration_AnalysisWithCorrelation_output_20251111/
