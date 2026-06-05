@@ -16,7 +16,7 @@ Python analysis code for the Roaring Fork River Basin cosmic-ray neutron sensing
 
 ## Reproducing the daily workflow (most figures/tables)
 1) Process moderated (and optional bare) counts — requirements1
-   - `ModCountsProcessing_Des_McJannet20251120.py` and `ModCountsProcessing_UTS_McJannet20251120.py`: apply atmospheric, solar, and biomass corrections; derive half-hour moderated counts and N0 per site for the Desilets and UTS formulations. Inputs: raw `Data_Relase_2024_b/*v1.csv` plus site variables; outputs: `Data/ModCountsProcessing_{Des,UTS}_output<date>/Mod_<Site>.csv`.
+   - `ModCountsProcessing_Des_McJannet20251120_sealevel_pref.py` and `ModCountsProcessing_UTS_McJannet20251120_sealevel_pref.py`: apply atmospheric, solar, and biomass corrections; derive half-hour moderated counts and N0 per site for the Desilets and UTS formulations. Inputs: raw `Data_Relase_2024_b/*v1.csv` plus site variables; outputs: `Data/ModCountsProcessing_{Des,UTS}_output<date>/Mod_<Site>.csv`.
    - `BareCountsProcessing.py`: applies the same corrections to bare detectors (optional for later snow checks). Output: `mock_Bare_output<date>/Bare_<Site>.csv`.
 2) Merge counts with TDR and precip — requirements1
    - `CombineDataWithFunction_sealevel_pref.py`: builds daily-averaged site data frames with corrected CRNS soil moisture (Des & UTS), raw moderated counts, depth-weighted TDR, soil temperatures, and PRISM precipitation. Output: `CombineDataWithFunction_output<date>/<site>_CRNS_Site_Data.csv`.
@@ -38,7 +38,7 @@ Python analysis code for the Roaring Fork River Basin cosmic-ray neutron sensing
    - `SWC_predictions_for_ea_sitee.py`: generates site-specific half-hour soil moisture predictions (Des & UTS), applies outlier filtering, and saves to `Site_specific_predictions_output_<date>/` along with fit statistics.
 
 ## Additional analyses and figures
-- `PaperTimeSeries_SWC_predictions_20251104.py`, `PaperTimeSeries_N0_and_Veg_1year_20251104.py`: build publication-ready time series for soil moisture, N0, vegetation indices, and drivers.
+- `PaperTimeSeries_SWC_predictions_20260210.py`, `PaperTimeSeries_N0_and_Veg_1year_20251104.py`: build publication-ready time series for soil moisture, N0, vegetation indices, and drivers.
 - `Bare_GDD_GSI_VPD_N0_2024only_20251121.py`: derives growing degree days, greenness indices, VPD, and N0 trajectories for 2024.
 - `sample_weighting_loop_with_SD_SE_20251031.py`: helper for depth-weighting profiles with uncertainty (used by the combiner scripts).
 - `N0_probe_analysis.py`: computes probe-based N0/ND time series per site with LocalOutlierFactor filtering and saves `*Probe_Based_Parameters.csv` (requirements2).
